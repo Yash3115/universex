@@ -40,14 +40,14 @@ app.use(fileUpload({ useTempFiles: true, tempFileDir: "/tmp/" })); //shubham
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 const corsoptions = {
-  origin: "http://localhost:5173",
+  origin: ["http://localhost:5173","https://universex-project.vercel.app"],
   methods: ["POST", "GET", "PUT", "DELETE"],
   credentials: true,
 };
 app.use(cors(corsoptions));
 // app.options("*", cors(corsoptions)); // Handle preflight requests
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "http://localhost:5173");
+  res.header("Access-Control-Allow-Origin", "https://universex-project.vercel.app");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.header("Access-Control-Allow-Credentials", "true");

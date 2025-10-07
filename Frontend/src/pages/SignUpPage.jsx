@@ -75,7 +75,7 @@ const SignUp = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/users/sendotp",
+        "https://universex-m5nn.vercel.app/api/users/sendotp",
         {email:formData.email},
         {
           withCredentials: true,

@@ -12,7 +12,7 @@ const CommentBox = ({ postId }) => {
   // ✅ Memoize fetchComments to prevent infinite loops
   const fetchComments = useCallback(async () => {
     try {
-      const res = await axios.get(`http://localhost:8000/api/comments/${postId}/comments`);
+      const res = await axios.get(`https://universex-m5nn.vercel.app/api/comments/${postId}/comments`);
       setComments(res.data.comments);
     } catch (err) {
       console.error("Error fetching comments:", err);
@@ -30,7 +30,7 @@ const CommentBox = ({ postId }) => {
     setLoading(true);
     try {
       await axios.post(
-        `http://localhost:8000/api/comments/${postId}/comments`,
+        `https://universex-m5nn.vercel.app/api/comments/${postId}/comments`,
         { content: newComment },
         { withCredentials: true }
       );

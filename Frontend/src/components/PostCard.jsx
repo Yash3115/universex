@@ -25,7 +25,7 @@ const PostCard = ({ post, allowUpdate = false }) => {
 
     try {
       const { data } = await axios.put(
-        `http://localhost:8000/api/posts/${post?._id}/like`,
+        `https://universex-m5nn.vercel.app/api/posts/${post?._id}/like`,
         {},
         {
           withCredentials: true,

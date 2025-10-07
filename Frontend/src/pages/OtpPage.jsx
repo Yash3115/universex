@@ -41,7 +41,7 @@ const OTPVerification = () => {
       const otp2 = otp.join("");
       formData.otp=otp2;
       const res = await axios.post(
-        "http://localhost:8000/api/users/signup",
+        "https://universex-m5nn.vercel.app/api/users/signup",
           formData,
         {
           withCredentials: true,
@@ -65,7 +65,7 @@ const OTPVerification = () => {
   const handleResendOTP= async()=>{
     const formData = localStorage.getItem("user-data");
     const response = await axios.post(
-      "http://localhost:8000/api/users/sendotp",
+      "https://universex-m5nn.vercel.app/api/users/sendotp",
       formData,
       {
         withCredentials: true,

@@ -34,7 +34,7 @@ const BudgetTracker = () => {
   useEffect(() => {
     async function fetchTransactions() {
       try {
-        const response = await axios.get("http://localhost:8000/api/transaction/all", {
+        const response = await axios.get("https://universex-m5nn.vercel.app/api/transaction/all", {
           withCredentials: true,
         });
         setTransactions(response.data.transactions);
@@ -89,7 +89,7 @@ const BudgetTracker = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/transaction/add",
+        "https://universex-m5nn.vercel.app/api/transaction/add",
         formData,
         {
           withCredentials: true,
@@ -116,7 +116,7 @@ const BudgetTracker = () => {
 
   const handleDeleteTransaction = async (transactionId, type, amount) => {
     try {
-      await axios.delete(`http://localhost:8000/api/transaction/remove/${transactionId}`, {
+      await axios.delete(`https://universex-m5nn.vercel.app/api/transaction/remove/${transactionId}`, {
         withCredentials: true,
       });
 

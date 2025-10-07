@@ -37,7 +37,7 @@ const CreatePost = ({ onClose }) => {
     }
 
     try {
-      const API_URL ="http://localhost:8000";
+      const API_URL ="https://universex-m5nn.vercel.app";
       const response = await axios.post(`${API_URL}/api/posts`, formData, {
         withCredentials: true,
       });

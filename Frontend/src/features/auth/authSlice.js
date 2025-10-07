@@ -8,7 +8,7 @@ export const login = createAsyncThunk(
   async (data, { rejectWithValue }) => {
     try {
       const response = await axios.post(
-        "http://localhost:8000/api/users/login",
+        "https://universex-m5nn.vercel.app/api/users/login",
         data,
         {
           withCredentials: true,
@@ -29,7 +29,7 @@ export const getUser = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
-        "http://localhost:8000/api/users/getUser",
+        "https://universex-m5nn.vercel.app/api/users/getUser",
         {
           withCredentials: true,
         }
@@ -47,7 +47,7 @@ export const logout = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await axios.get(
-        "http://localhost:8000/api/users/logout",
+        "https://universex-m5nn.vercel.app/api/users/logout",
         {
           withCredentials: true,
         }
@@ -66,7 +66,7 @@ export const updateProfileImage = createAsyncThunk(
   async (formData, { rejectWithValue }) => {
     try {
       const response = await axios.put(
-        "http://localhost:8000/api/profile/updateDisplayPicture",
+        "https://universex-m5nn.vercel.app/api/profile/updateDisplayPicture",
         formData,
         {
           withCredentials: true,
@@ -89,7 +89,7 @@ export const updateProfile = createAsyncThunk(
   async (data, { rejectWithValue }) => {
     try {
       const response = await axios.put(
-        "http://localhost:8000/api/profile/updateProfile",
+        "https://universex-m5nn.vercel.app/api/profile/updateProfile",
         data,
         {
           withCredentials: true,

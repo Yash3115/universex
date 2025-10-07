@@ -1,7 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api/posts"; // Update this to the correct backend URL
+const API_URL = "https://universex-m5nn.vercel.app/api/posts"; // Update this to the correct backend URL
 
 // Fetch all posts
 export const fetchPosts = createAsyncThunk("posts/fetchPosts", async (_, { getState }) => {
