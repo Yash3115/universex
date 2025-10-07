@@ -46,14 +46,14 @@ const corsoptions = {
 };
 app.use(cors(corsoptions));
 // app.options("*", cors(corsoptions)); // Handle preflight requests
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://universex-project.vercel.app");
-  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.header("Access-Control-Allow-Credentials", "true");
+// app.use((req, res, next) => {
+//   res.header("Access-Control-Allow-Origin", "https://universex-project.vercel.app");
+//   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+//   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+//   res.header("Access-Control-Allow-Credentials", "true");
 
-  next();
-});
+//   next();
+// });
 
 app.use(morgan("dev"));
 app.use(cookieParser());
