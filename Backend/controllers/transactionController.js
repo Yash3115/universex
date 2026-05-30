@@ -1,5 +1,6 @@
 const Transaction = require("../models/transactionSchema");
 const User = require("../models/userSchema");
+const Budget = require("../models/budgetSchema");
 const categorizeExpense = require("../utils/aiCategorization");
 
 const parsePositiveAmount = (amount) => {
@@ -8,6 +9,8 @@ const parsePositiveAmount = (amount) => {
 };
 
 const isSupportedType = (type) => ["credit", "debit"].includes(type);
+
+const getMonthKey = (date = new Date()) => date.toISOString().slice(0, 7);
 
 // ✅ Add Transaction & Update Balance
 exports.addTransaction = async (req, res) => {
@@ -148,5 +151,68 @@ exports.showAllTransactions = async (req, res) => {
     res.status(200).json({ transactions, balance: user.balance });
   } catch (error) {
     res.status(500).json({ message: "Error fetching transactions", error: error.message });
+  }
+};
+
+exports.getBudgetAnalytics = async (req, res) => {
+  try {
+    const month = req.query.month || getMonthKey();
+    const start = new Date(`${month}-01T00:00:00.000Z`);
+    const end = new Date(start);
+    end.setUTCMonth(end.getUTCMonth() + 1);
+
+    const [transactions, budgets] = await Promise.all([
+      Transaction.find({ userId: req.user.id, date: { $gte: start, $lt: end } }).sort({ date: -1 }),
+      Budget.find({ user: req.user.id, month }),
+    ]);
+
+    const totals = transactions.reduce(
+      (acc, transaction) => {
+        if (transaction.type === "credit") acc.income += transaction.amount;
+        if (transaction.type === "debit") {
+          acc.expense += transaction.amount;
+          acc.byCategory[transaction.category] = (acc.byCategory[transaction.category] || 0) + transaction.amount;
+        }
+        return acc;
+      },
+      { income: 0, expense: 0, byCategory: {} }
+    );
+
+    const budgetUsage = budgets.map((budget) => ({
+      category: budget.category,
+      monthlyLimit: budget.monthlyLimit,
+      spent: totals.byCategory[budget.category] || 0,
+      usagePercent: budget.monthlyLimit ? Math.round(((totals.byCategory[budget.category] || 0) / budget.monthlyLimit) * 100) : 0,
+    }));
+
+    res.status(200).json({
+      success: true,
+      month,
+      totals,
+      budgetUsage,
+      recentTransactions: transactions.slice(0, 10),
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching budget analytics", error: error.message });
+  }
+};
+
+exports.upsertBudget = async (req, res) => {
+  try {
+    const { category, monthlyLimit, month = getMonthKey() } = req.body;
+    const limit = Number(monthlyLimit);
+    if (!category || !Number.isFinite(limit) || limit < 0) {
+      return res.status(400).json({ success: false, message: "Category and valid monthly limit are required" });
+    }
+
+    const budget = await Budget.findOneAndUpdate(
+      { user: req.user.id, category, month },
+      { monthlyLimit: limit },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    res.status(200).json({ success: true, message: "Budget saved", budget });
+  } catch (error) {
+    res.status(500).json({ message: "Error saving budget", error: error.message });
   }
 };

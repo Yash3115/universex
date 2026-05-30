@@ -1,4 +1,6 @@
 const Job = require("../models/jobSchema");
+const User = require("../models/userSchema");
+const { createNotification } = require("../utils/notificationService");
 
 const ALLOWED_UPDATE_FIELDS = [
   "title",
@@ -95,6 +97,19 @@ exports.createJob = async (req, res) => {
     });
 
     await job.populate("postedBy", "firstName lastName email image role");
+
+    const usersToNotify = await User.find({ _id: { $ne: req.user._id } }).select("_id").limit(100);
+    await Promise.all(
+      usersToNotify.map((user) =>
+        createNotification({
+          recipient: user._id,
+          sender: req.user._id,
+          job: job._id,
+          type: "Job",
+          message: `posted a new opportunity: ${job.title}`,
+        })
+      )
+    );
 
     return res.status(201).json({
       success: true,

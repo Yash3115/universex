@@ -7,6 +7,8 @@ import { createPost } from "../features/posts/postsSlice";
 const CreatePost = ({ onClose }) => {
   const dispatch = useDispatch();
   const [caption, setCaption] = useState("");
+  const [category, setCategory] = useState("General");
+  const [tags, setTags] = useState("");
   const [image, setImage] = useState(null);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -41,6 +43,8 @@ const CreatePost = ({ onClose }) => {
 
     const formData = new FormData();
     formData.append("content", caption);
+    formData.append("category", category);
+    formData.append("tags", tags);
     if (file) {
       formData.append("displayPicture", file);
     }
@@ -87,6 +91,19 @@ const CreatePost = ({ onClose }) => {
             className="w-full resize-none rounded-2xl border p-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
             rows="3"
           />
+
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <select className="select select-bordered rounded-2xl" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option>General</option>
+              <option>Academics</option>
+              <option>Placements</option>
+              <option>Events</option>
+              <option>Lost & Found</option>
+              <option>Help</option>
+              <option>Announcements</option>
+            </select>
+            <input className="input input-bordered rounded-2xl" value={tags} onChange={(e) => setTags(e.target.value)} placeholder="tags: fest, exam" />
+          </div>
 
           {/* Image Upload */}
           {image ? (

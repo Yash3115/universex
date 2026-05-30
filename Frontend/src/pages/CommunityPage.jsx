@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchPosts } from "../features/posts/postsSlice";
+import { fetchPosts, setPostFilters } from "../features/posts/postsSlice";
 import { useDispatch, useSelector } from "react-redux";
 import PostCard from "../components/PostCard";
 import CommunitySideBar from "../components/CommunitySideBar";
@@ -10,13 +10,19 @@ const Community = () => {
   const posts = useSelector((state) => state.posts.posts);
   const postsStatus = useSelector((state) => state.posts.status);
   const error = useSelector((state) => state.posts.error);
+  const filters = useSelector((state) => state.posts.filters);
   const [createPostIsOpen, setCreatePostIsOpen] = useState(false);
 
   useEffect(() => {
     if (postsStatus === "idle") {
-      dispatch(fetchPosts());
+      dispatch(fetchPosts(filters));
     }
-  }, [postsStatus, dispatch]);
+  }, [postsStatus, dispatch, filters]);
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    dispatch(setPostFilters({ [name]: value }));
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8">
@@ -32,6 +38,30 @@ const Community = () => {
           >
             + Create new post
           </button>
+        </section>
+
+        <section className="grid grid-cols-1 gap-3 rounded-3xl bg-white/90 p-4 shadow-xl shadow-slate-200/70 md:grid-cols-4">
+          <input
+            className="input input-bordered rounded-2xl md:col-span-2"
+            name="search"
+            value={filters.search}
+            onChange={handleFilterChange}
+            placeholder="Search posts..."
+          />
+          <select className="select select-bordered rounded-2xl" name="category" value={filters.category} onChange={handleFilterChange}>
+            <option value="all">All categories</option>
+            <option>General</option>
+            <option>Academics</option>
+            <option>Placements</option>
+            <option>Events</option>
+            <option>Lost & Found</option>
+            <option>Help</option>
+            <option>Announcements</option>
+          </select>
+          <select className="select select-bordered rounded-2xl" name="sort" value={filters.sort} onChange={handleFilterChange}>
+            <option value="newest">Newest</option>
+            <option value="trending">Trending</option>
+          </select>
         </section>
 
         {postsStatus === "loading" && <p className="rounded-3xl bg-white p-8 text-center font-semibold text-gray-500 shadow">Loading posts...</p>}

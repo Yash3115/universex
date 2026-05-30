@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FaRegComment, FaThumbsUp, FaFlag, FaTrash } from "react-icons/fa";
+import { FaBookmark, FaRegComment, FaThumbsUp, FaFlag, FaTrash } from "react-icons/fa";
 import CommentBox from "./CommentBox";
 import api from "../services/api";
 import { useDispatch, useSelector } from "react-redux";
@@ -11,6 +11,7 @@ const PostCard = ({ post, allowUpdate = false }) => {
   const user = useSelector((state) => state.auth.user);
   const [showComment, setShowComment] = useState(false);
   const [openReportBox, setOpenReportBox] = useState(false);
+  const [reportReason, setReportReason] = useState("");
   const [likes, setLikes] = useState(post?.likes?.length || 0);
   const [isLiked, setIsLiked] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -49,6 +50,26 @@ const PostCard = ({ post, allowUpdate = false }) => {
       toast.success("Post deleted successfully");
     } catch (error) {
       toast.error(error || "Failed to delete post");
+    }
+  };
+
+  const handleSavePost = async () => {
+    try {
+      const response = await api.put(`/api/posts/${post?._id}/save`);
+      toast.success(response.data.saved ? "Post saved" : "Post removed from saved");
+    } catch {
+      toast.error("Unable to save post");
+    }
+  };
+
+  const handleReportPost = async () => {
+    try {
+      await api.post(`/api/posts/${post?._id}/report`, { reason: reportReason });
+      toast.success("Report submitted for moderation");
+      setOpenReportBox(false);
+      setReportReason("");
+    } catch {
+      toast.error("Unable to report post");
     }
   };
 
@@ -94,6 +115,10 @@ const PostCard = ({ post, allowUpdate = false }) => {
         <p className="text-gray-800 text-base leading-relaxed">
           {post?.content || ""}
         </p>
+        <div className="flex flex-wrap gap-2">
+          {post?.category && <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">{post.category}</span>}
+          {post?.tags?.map((tag) => <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">#{tag}</span>)}
+        </div>
 
         {post?.image && (
           <div className="relative flex justify-center">
@@ -134,6 +159,9 @@ const PostCard = ({ post, allowUpdate = false }) => {
         >
           <FaRegComment /> <span>Comment {post?.comments?.length || 0}</span>
         </button>
+        <button className="flex items-center space-x-2 hover:text-blue-600" onClick={handleSavePost}>
+          <FaBookmark /> <span>Save</span>
+        </button>
         <button
           className="flex items-center space-x-2 hover:text-blue-600"
           onClick={() => setOpenReportBox(true)}
@@ -150,6 +178,12 @@ const PostCard = ({ post, allowUpdate = false }) => {
             <p className="text-blue-600">
               Are you sure you want to report this post?
             </p>
+            <textarea
+              className="textarea textarea-bordered mt-3 w-full rounded-2xl"
+              placeholder="Optional reason"
+              value={reportReason}
+              onChange={(event) => setReportReason(event.target.value)}
+            />
             <div className="modal-action flex justify-end mt-4">
               <button
                 onClick={() => setOpenReportBox(false)}
@@ -158,10 +192,7 @@ const PostCard = ({ post, allowUpdate = false }) => {
                 No
               </button>
               <button
-                onClick={() => {
-                  toast.info("Thanks for reporting. Moderation workflow is pending.");
-                  setOpenReportBox(false);
-                }}
+                onClick={handleReportPost}
                 className="btn bg-red-500 text-white px-4 py-2 rounded-lg ml-2"
               >
                 Yes

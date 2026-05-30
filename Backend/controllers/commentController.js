@@ -1,5 +1,6 @@
 const Comment = require("../models/commentSchema");
 const Post = require("../models/postSchema");
+const { createNotification } = require("../utils/notificationService");
 
 // 📌 Create a new comment on a post (Direct Comment)
 exports.createComment = async (req, res) => {
@@ -23,6 +24,15 @@ exports.createComment = async (req, res) => {
         // Add comment reference to the post
         post.comments.push(comment._id);
         await post.save();
+
+        await createNotification({
+            recipient: post.user,
+            sender: userId,
+            post: postId,
+            comment: comment._id,
+            type: "Comment",
+            message: "commented on your post",
+        });
 
         res.status(201).json({ success: true, message: "Comment added successfully", comment });
 
@@ -60,6 +70,15 @@ exports.replyToComment = async (req, res) => {
         // Add reply reference to the parent comment
         parentComment.replies.push(reply._id);
         await parentComment.save();
+
+        await createNotification({
+            recipient: parentComment.user,
+            sender: userId,
+            post: parentComment.post,
+            comment: reply._id,
+            type: "Reply",
+            message: "replied to your comment",
+        });
 
         res.status(201).json({ success: true, message: "Reply added successfully", reply });
 

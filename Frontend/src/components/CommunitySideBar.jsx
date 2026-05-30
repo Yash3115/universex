@@ -11,8 +11,9 @@ function CommunitySideBar() {
     { name: "Dashboard", route: "/dashboard" },
     { name: "Community", route: "/community" },
     { name: "Jobs & Opportunities", route: "/jobs" },
+    { name: "Student Discovery", route: "/students" },
     { name: "Budget Tracker", route: "/budget" },
-    { name: "Class Routine", route: "/class" },
+    { name: "Academic Planner", route: "/class" },
   ];
 
   return (

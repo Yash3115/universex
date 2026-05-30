@@ -6,9 +6,14 @@ const POSTS_ENDPOINT = "/api/posts";
 // Fetch all posts
 export const fetchPosts = createAsyncThunk(
   "posts/fetchPosts",
-  async (_, { getState, rejectWithValue }) => {
+  async (filters = {}, { getState, rejectWithValue }) => {
     try {
-      const response = await api.get(POSTS_ENDPOINT);
+      const params = new URLSearchParams();
+      Object.entries(filters || {}).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+      const queryString = params.toString();
+      const response = await api.get(`${POSTS_ENDPOINT}${queryString ? `?${queryString}` : ""}`);
       const posts = response.data.posts || [];
       const userId = getState().auth.user?._id || null;
       return { posts, userId };
@@ -66,12 +71,22 @@ const initialState = {
   userPosts: [], // Posts created by the current user
   status: "idle", // loading, succeeded, failed
   error: null,
+  filters: {
+    search: "",
+    category: "all",
+    sort: "newest",
+  },
 };
 
 const postsSlice = createSlice({
   name: "posts",
   initialState,
-  reducers: {},
+  reducers: {
+    setPostFilters: (state, action) => {
+      state.filters = { ...state.filters, ...action.payload };
+      state.status = "idle";
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchPosts.pending, (state) => {
@@ -118,3 +133,4 @@ const postsSlice = createSlice({
 });
 
 export default postsSlice.reducer;
+export const { setPostFilters } = postsSlice.actions;

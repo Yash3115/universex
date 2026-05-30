@@ -18,8 +18,9 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ContactDirectory = lazy(() => import("./pages/ContactDirectory"));
 const JobsPage = lazy(() => import("./pages/JobsPage"));
-const ClassRoutine = lazy(() => import("./dummy/DummyClassRoutine"));
 const ClassRoutineInput = lazy(() => import("./dummy/DummyAddRoutine"));
+const AcademicPlannerPage = lazy(() => import("./pages/AcademicPlannerPage"));
+const StudentDirectory = lazy(() => import("./pages/StudentDirectory"));
 
 const PageLoader = () => (
   <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
@@ -97,7 +98,15 @@ const App = () => {
             path="/class"
             element={
               <AuthenticatedRoutes>
-                <ClassRoutine />
+                <AcademicPlannerPage />
+              </AuthenticatedRoutes>
+            }
+          />
+          <Route
+            path="/academic"
+            element={
+              <AuthenticatedRoutes>
+                <AcademicPlannerPage />
               </AuthenticatedRoutes>
             }
           />
@@ -138,6 +147,14 @@ const App = () => {
             element={
               <AuthenticatedRoutes>
                 <ContactDirectory />
+              </AuthenticatedRoutes>
+            }
+          />
+          <Route
+            path="/students"
+            element={
+              <AuthenticatedRoutes>
+                <StudentDirectory />
               </AuthenticatedRoutes>
             }
           />

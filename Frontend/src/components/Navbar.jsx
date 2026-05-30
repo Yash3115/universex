@@ -4,6 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../features/auth/authSlice";
 import { FiMenu } from "react-icons/fi";
 import { AiOutlineClose } from "react-icons/ai";
+import NotificationBell from "./NotificationBell";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -53,7 +54,8 @@ const Navbar = () => {
     { name: "Community", route: "/community" },
     { name: "Jobs", route: "/jobs" },
     { name: "Budget", route: "/budget" },
-    { name: "Routine", route: "/class" },
+    { name: "Academics", route: "/class" },
+    { name: "Students", route: "/students" },
     { name: "Directory", route: "/contactDirectory" },
     { name: "Profile", route: "/profile" },
   ];
@@ -94,6 +96,7 @@ const Navbar = () => {
         </ul>
 
         <div className="flex items-center gap-2 sm:gap-3">
+        {isAuthenticated && <NotificationBell />}
         {isAuthenticated ? (
           <div className="relative">
             <button

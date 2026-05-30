@@ -2,11 +2,22 @@ const Post = require("../models/postSchema");
 const User = require("../models/userSchema");
 const Comment = require("../models/commentSchema");
 const {uploadImageToCloudinary} = require("../utils/imageUploader");
+const { createNotification } = require("../utils/notificationService");
+
+const POST_CATEGORIES = ["General", "Academics", "Placements", "Events", "Lost & Found", "Help", "Announcements"];
+
+const normalizeTags = (tags) => {
+    if (Array.isArray(tags)) return tags.map((tag) => String(tag).trim()).filter(Boolean).slice(0, 8);
+    if (typeof tags === "string") return tags.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 8);
+    return [];
+};
 
 // 📌 Create a new post
 exports.createPost = async (req, res) => {
     try {
         const content = req.body.content?.trim();
+        const category = POST_CATEGORIES.includes(req.body.category) ? req.body.category : "General";
+        const tags = normalizeTags(req.body.tags);
         const userId = req.user.id;
 
         if (!content) {
@@ -34,6 +45,8 @@ exports.createPost = async (req, res) => {
             content,
             image: imageUrl,
             college: user.college,
+            category,
+            tags,
         });
 
         await post.save();
@@ -50,20 +63,25 @@ exports.createPost = async (req, res) => {
 // 📌 Get all posts with comments and user details
 exports.getPosts = async (req, res) => {
     try {
+        const { category, search, sort = "newest" } = req.query;
         const pageNumber = Math.max(parseInt(req.query.page, 10) || 1, 1);
         const pageSize = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 50);
+        const filter = {};
+        if (category && category !== "all") filter.category = category;
+        if (search?.trim()) filter.$text = { $search: search.trim() };
+        const sortBy = sort === "trending" ? { likes: -1, createdAt: -1 } : { createdAt: -1 };
 
-        const posts = await Post.find()
+        const posts = await Post.find(filter)
             .populate("user", "firstName lastName image")
             .populate({
                 path: "comments",
                 populate: { path: "user", select: "firstName lastName image" }
             })
-            .sort({ createdAt: -1 })
+            .sort(sortBy)
             .skip((pageNumber - 1) * pageSize)
             .limit(pageSize);
 
-        const totalPosts = await Post.countDocuments();
+        const totalPosts = await Post.countDocuments(filter);
 
         res.status(200).json({
             success: true,
@@ -78,6 +96,43 @@ exports.getPosts = async (req, res) => {
 
     } catch (err) {
         console.error("Error in getPosts:", err);
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+exports.reportPost = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { reason = "" } = req.body;
+        const post = await Post.findById(id);
+        if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+
+        const alreadyReported = post.reports.some((report) => report.user.toString() === req.user.id);
+        if (!alreadyReported) {
+            post.reports.push({ user: req.user.id, reason });
+            await post.save();
+        }
+
+        res.status(200).json({ success: true, message: "Post reported for moderation" });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
+exports.savePost = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const post = await Post.findById(id);
+        if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+
+        const isSaved = post.savedBy.some((userId) => userId.toString() === req.user.id);
+        post.savedBy = isSaved
+            ? post.savedBy.filter((userId) => userId.toString() !== req.user.id)
+            : [...post.savedBy, req.user.id];
+        await post.save();
+
+        res.status(200).json({ success: true, saved: !isSaved, post });
+    } catch (err) {
         res.status(500).json({ success: false, error: err.message });
     }
 };
@@ -121,6 +176,13 @@ exports.likePost = async (req, res) => {
             post.likes = post.likes.filter(id => id.toString() !== userId);
         } else {
             post.likes.push(userId);
+            await createNotification({
+                recipient: post.user,
+                sender: userId,
+                post: post._id,
+                type: "Like",
+                message: "liked your post",
+            });
         }
 
         await post.save();
@@ -137,5 +199,7 @@ exports.likePost = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
+
 
 

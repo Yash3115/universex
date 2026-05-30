@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import TransactionData from "../components/TransactionData";
 // import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import InsightsModal from "../components/InsightModal";
 import api from "../services/api";
+import { fetchBudgetAnalytics, saveCategoryBudget } from "../features/budget/budgetSlice";
 
 const CATEGORIES = {
   food: ["restaurant", "dinner", "lunch", "breakfast", "snacks", "coffee", "tea", "meal"],
@@ -18,6 +20,8 @@ const CATEGORIES = {
 };
 
 const BudgetTracker = () => {
+  const dispatch = useDispatch();
+  const analytics = useSelector((state) => state.budget.analytics);
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
@@ -30,6 +34,7 @@ const BudgetTracker = () => {
     category: "",
   });
   const [errorMessage, setErrorMessage] = useState("");
+  const [budgetForm, setBudgetForm] = useState({ category: "food", monthlyLimit: "" });
 
   const processCategoryData = useCallback((transactions) => {
     const categoryTotals = {};
@@ -64,7 +69,8 @@ const BudgetTracker = () => {
       }
     }
     fetchTransactions();
-  }, [processCategoryData]);
+    dispatch(fetchBudgetAnalytics());
+  }, [dispatch, processCategoryData]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -95,6 +101,7 @@ const BudgetTracker = () => {
         setTransactions(updatedTransactions);
         setBalance(res.balance);
         processCategoryData(updatedTransactions);
+        dispatch(fetchBudgetAnalytics());
       }
     } catch {
       toast.error("Something went wrong. Please try again");
@@ -114,10 +121,22 @@ const BudgetTracker = () => {
       setTransactions(updatedTransactions);
       setBalance(response.data.balance);
       processCategoryData(updatedTransactions);
+      dispatch(fetchBudgetAnalytics());
 
       toast.success("Transaction deleted successfully");
     } catch {
       toast.error("Failed to delete transaction");
+    }
+  };
+
+  const handleBudgetSave = async () => {
+    try {
+      await dispatch(saveCategoryBudget({ ...budgetForm, monthlyLimit: Number(budgetForm.monthlyLimit) })).unwrap();
+      toast.success("Budget goal saved");
+      setBudgetForm({ category: "food", monthlyLimit: "" });
+      dispatch(fetchBudgetAnalytics());
+    } catch (error) {
+      toast.error(error || "Unable to save budget goal");
     }
   };
 
@@ -161,6 +180,42 @@ const BudgetTracker = () => {
       </div>
 
       <InsightsModal categoryData={categoryData} />
+      <div className="rounded-[2rem] border border-white bg-white/90 p-5 shadow-2xl shadow-slate-200/70 backdrop-blur lg:col-span-2">
+        <h3 className="text-xl font-black text-gray-900">Monthly intelligence</h3>
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="rounded-2xl bg-emerald-50 p-4">
+            <p className="text-sm text-emerald-700">Income</p>
+            <p className="text-2xl font-black text-emerald-800">₹{analytics?.totals?.income || 0}</p>
+          </div>
+          <div className="rounded-2xl bg-red-50 p-4">
+            <p className="text-sm text-red-700">Expenses</p>
+            <p className="text-2xl font-black text-red-800">₹{analytics?.totals?.expense || 0}</p>
+          </div>
+          <div className="rounded-2xl bg-blue-50 p-4">
+            <p className="text-sm text-blue-700">Net flow</p>
+            <p className="text-2xl font-black text-blue-800">₹{(analytics?.totals?.income || 0) - (analytics?.totals?.expense || 0)}</p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_auto]">
+          <select className="select select-bordered rounded-2xl" value={budgetForm.category} onChange={(e) => setBudgetForm((prev) => ({ ...prev, category: e.target.value }))}>
+            {Object.keys(CATEGORIES).map((category) => <option key={category} value={category}>{category}</option>)}
+          </select>
+          <input className="input input-bordered rounded-2xl" type="number" placeholder="Monthly limit" value={budgetForm.monthlyLimit} onChange={(e) => setBudgetForm((prev) => ({ ...prev, monthlyLimit: e.target.value }))} />
+          <button className="btn btn-primary rounded-2xl" onClick={handleBudgetSave}>Save goal</button>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {analytics?.budgetUsage?.length ? analytics.budgetUsage.map((item) => (
+            <div key={item.category}>
+              <div className="flex justify-between text-sm font-semibold text-gray-700">
+                <span>{item.category}</span><span>₹{item.spent} / ₹{item.monthlyLimit}</span>
+              </div>
+              <progress className={`progress w-full ${item.usagePercent > 90 ? "progress-error" : item.usagePercent > 70 ? "progress-warning" : "progress-success"}`} value={Math.min(item.usagePercent, 100)} max="100" />
+            </div>
+          )) : <p className="rounded-2xl bg-gray-50 p-4 text-sm text-gray-500">No monthly goals yet.</p>}
+        </div>
+      </div>
       </div>
     </div>
   );

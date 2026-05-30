@@ -6,14 +6,18 @@ const notificationSchema = new mongoose.Schema(
         sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         post: { type: mongoose.Schema.Types.ObjectId, ref: "Post" },
         comment: { type: mongoose.Schema.Types.ObjectId, ref: "Comment" },
+        job: { type: mongoose.Schema.Types.ObjectId, ref: "Job" },
         type: {
             type: String,
-            enum: ["Like", "Comment", "Reaction"],
+            enum: ["Like", "Comment", "Reply", "Reaction", "Job", "Academic", "System"],
             required: true,
         },
+        message: { type: String, trim: true, default: "" },
         read: { type: Boolean, default: false },
     },
     { timestamps: true }
 );
+
+notificationSchema.index({ recipient: 1, read: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Notification", notificationSchema);

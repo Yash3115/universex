@@ -3,7 +3,9 @@ const {
     createPost, 
     getPosts, 
     likePost, 
-    deletePost 
+    deletePost,
+    reportPost,
+    savePost 
 } = require("../controllers/postController");
 
 const { 
@@ -21,6 +23,8 @@ const router = express.Router();
 router.post("/", authMiddleware, createPost);
 router.get("/", getPosts);
 router.put("/:id/like", authMiddleware, likePost);
+router.put("/:id/save", authMiddleware, savePost);
+router.post("/:id/report", authMiddleware, reportPost);
 router.delete("/:id", authMiddleware, deletePost);
 
 

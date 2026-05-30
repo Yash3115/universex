@@ -14,6 +14,9 @@ const profileSchema = new mongoose.Schema({
 	linkedin: { type: String, default: "" },
 	department: { type: String, trim: true, default: "" }, // New field
 	graduationYear: { type: Number}, // New field
+	skills: [{ type: String, trim: true }],
+	interests: [{ type: String, trim: true }],
+	visibility: { type: String, enum: ["public", "college", "private"], default: "public" },
 });
   
 // Export the Profile model

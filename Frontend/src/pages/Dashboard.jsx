@@ -1,6 +1,6 @@
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { FaBookOpen, FaBriefcase, FaCalendarAlt, FaChartPie, FaComments, FaPhoneAlt, FaUserCircle } from "react-icons/fa";
+import { FaBookOpen, FaBriefcase, FaCalendarAlt, FaChartPie, FaComments, FaPhoneAlt, FaUserCircle, FaUsers } from "react-icons/fa";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -37,7 +37,7 @@ function Dashboard() {
       description: "Access all the important contact at one place.",
     },
     {
-      name: "Class Routine",
+      name: "Academic Planner",
       icon: FaCalendarAlt,
       accent: "from-red-500 to-orange-500",
       route: "/class",
@@ -50,6 +50,13 @@ function Dashboard() {
       accent: "from-indigo-500 to-blue-500",
       route: "/profile",
       description: "Manage your personal information and account settings.",
+    },
+    {
+      name: "Student Discovery",
+      icon: FaUsers,
+      accent: "from-fuchsia-500 to-purple-500",
+      route: "/students",
+      description: "Find peers by college, department, year, and profile details.",
     },
   ];
 
