@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
+import ConfirmDialog from "../components/ConfirmDialog";
 import JobCard from "../components/JobCard";
 import JobFormModal from "../components/JobFormModal";
 import {
@@ -18,6 +19,7 @@ const JobsPage = () => {
   const user = useSelector((state) => state.auth.user);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
+  const [jobToDelete, setJobToDelete] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -63,11 +65,11 @@ const JobsPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (jobId) => {
-    if (!window.confirm("Delete this opportunity? This cannot be undone.")) return;
-
+  const handleDelete = async () => {
+    if (!jobToDelete) return;
     try {
-      await dispatch(deleteJob(jobId)).unwrap();
+      await dispatch(deleteJob(jobToDelete)).unwrap();
+      setJobToDelete(null);
       toast.success("Opportunity deleted successfully");
     } catch (deleteError) {
       toast.error(deleteError || "Unable to delete opportunity");
@@ -165,7 +167,7 @@ const JobsPage = () => {
               job={job}
               canManage={canManage(job)}
               onEdit={handleEdit}
-              onDelete={handleDelete}
+              onDelete={setJobToDelete}
             />
           ))}
         </div>
@@ -182,6 +184,15 @@ const JobsPage = () => {
           submitting={submitting}
         />
       )}
+      <ConfirmDialog
+        open={Boolean(jobToDelete)}
+        title="Delete this opportunity?"
+        message="Students will no longer be able to see or apply from this listing. This action cannot be undone."
+        confirmText="Delete opportunity"
+        variant="danger"
+        onCancel={() => setJobToDelete(null)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };

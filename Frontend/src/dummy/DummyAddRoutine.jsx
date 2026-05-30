@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { toast } from "react-toastify";
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
@@ -40,7 +41,7 @@ const ClassRoutineInput = () => {
 
   // 📤 Submit routine (send to backend later)
   const submitRoutine = () => {
-    alert("Routine saved successfully!");
+    toast.success("Routine saved locally. Backend persistence is coming soon.");
     // Here you can make an API call to save the routine in your database
   };
 

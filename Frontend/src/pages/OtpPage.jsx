@@ -26,29 +26,27 @@ const OTPVerification = () => {
     }
   };
   useEffect(()=>{
-    if(!localStorage.getItem("user-data")){
+    if(!sessionStorage.getItem("pending-signup-email")){
       navigate("/signup", { replace: true });
     }
   },[navigate])
   const verifyOtp = async() => {
     try {
-      const storedUserData = localStorage.getItem("user-data");
-      if (!storedUserData) {
+      const pendingEmail = sessionStorage.getItem("pending-signup-email");
+      if (!pendingEmail) {
         toast.error("Signup session expired. Please sign up again.");
         navigate("/signup", { replace: true });
         return;
       }
 
-      const formData = JSON.parse(storedUserData);
       const otp2 = otp.join("");
       if (otp2.length !== 4) {
         toast.error("Please enter the complete OTP");
         return;
       }
-      formData.otp=otp2;
       const res = await api.post(
         "/api/users/signup",
-          formData,
+          { email: pendingEmail, otp: otp2 },
         {
           headers: { "Content-Type": "application/json" },
         }
@@ -59,7 +57,7 @@ const OTPVerification = () => {
       }
       else{
         toast.success("OTP Verification completed")
-        localStorage.removeItem("user-data");
+        sessionStorage.removeItem("pending-signup-email");
         navigate("/login");
       }
       
@@ -69,17 +67,16 @@ const OTPVerification = () => {
   };
   const handleResendOTP= async()=>{
     try {
-      const storedUserData = localStorage.getItem("user-data");
-      if (!storedUserData) {
+      const pendingEmail = sessionStorage.getItem("pending-signup-email");
+      if (!pendingEmail) {
         toast.error("Signup session expired. Please sign up again.");
         navigate("/signup", { replace: true });
         return;
       }
 
-      const formData = JSON.parse(storedUserData);
       const response = await api.post(
         "/api/users/sendotp",
-        { email: formData.email },
+        { email: pendingEmail },
         {
           headers: { "Content-Type": "application/json" },
         }

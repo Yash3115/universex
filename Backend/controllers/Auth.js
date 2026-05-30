@@ -3,6 +3,7 @@ const jwt = require("jsonwebtoken");
 const otpGenerator = require("otp-generator");
 const User = require("../models/userSchema");
 const OTP = require("../models/otp");
+const PendingSignup = require("../models/pendingSignupSchema");
 const mailSender = require("../utils/mailSender");
 const { passwordUpdated } = require("../mail/templates/passwordUpdate");
 const Profile = require("../models/profileSchema");
@@ -26,25 +27,27 @@ exports.signup = async (req, res) => {
       dateOfBirth,
       college,
     } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
 
-    // Validate required fields
-    if (
-      !firstName ||
-      !lastName ||
-      !email ||
-      !password ||
-      !otp ||
-      !gender ||
-      !dateOfBirth ||
-      !college
-    ) {
+    if (!normalizedEmail || !otp) {
       return res.status(403).json({
         success: false,
-        message: "All fields are required",
+        message: "Email and OTP are required",
       });
     }
+
+    const pendingSignup = await PendingSignup.findOne({ email: normalizedEmail });
+    const usingPendingSignup = Boolean(pendingSignup);
+
+    if (!usingPendingSignup && (!firstName || !lastName || !password || !gender || !dateOfBirth || !college)) {
+      return res.status(400).json({
+        success: false,
+        message: "Signup session expired. Please request a new OTP.",
+      });
+    }
+
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -53,7 +56,7 @@ exports.signup = async (req, res) => {
     }
 
     // Validate OTP
-    const response = (await OTP.find({ email }).sort({ createdAt: -1 }).limit(1)) || [];
+    const response = (await OTP.find({ email: normalizedEmail }).sort({ createdAt: -1 }).limit(1)) || [];
     
     // Ensure response exists before checking OTP
     if (response.length === 0 || String(otp) !== String(response[0].otp)) {
@@ -63,33 +66,53 @@ exports.signup = async (req, res) => {
       });
     }
 
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const signupData = usingPendingSignup
+      ? {
+          firstName: pendingSignup.firstName,
+          lastName: pendingSignup.lastName,
+          email: pendingSignup.email,
+          contactNumber: pendingSignup.contactNumber,
+          gender: pendingSignup.gender,
+          dateOfBirth: pendingSignup.dateOfBirth,
+          college: pendingSignup.college,
+          hashedPassword: pendingSignup.hashedPassword,
+        }
+      : {
+          firstName,
+          lastName,
+          email: normalizedEmail,
+          contactNumber,
+          gender,
+          dateOfBirth,
+          college,
+          hashedPassword: await bcrypt.hash(password, 10),
+        };
 
     // Create Additional Profile for User
     const profileDetails = await Profile.create({
-      gender,
-      dateOfBirth,
+      gender: signupData.gender,
+      dateOfBirth: signupData.dateOfBirth,
       about: null,
-      contactNumber: contactNumber || null,
+      contactNumber: signupData.contactNumber || null,
     });
 
     // Create User
     const user = await User.create({
-      firstName,
-      lastName,
-      email,
-      contactNumber,
-      password: hashedPassword,
-      college,
-      gender,
-      dateOfBirth,
+      firstName: signupData.firstName,
+      lastName: signupData.lastName,
+      email: signupData.email,
+      contactNumber: signupData.contactNumber,
+      password: signupData.hashedPassword,
+      college: signupData.college,
+      gender: signupData.gender,
+      dateOfBirth: signupData.dateOfBirth,
       additionalDetails: profileDetails._id,
       role: "Student",
       image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpmteUFDtMLPVMxqUwYc5I7vMhEi8RKQznPSeSMKZ_FG5DBWGDs25O8cK7N10GhNudeRY&usqp=CAU",
     });
 
-    await OTP.deleteMany({ email });
+    await OTP.deleteMany({ email: normalizedEmail });
+    await PendingSignup.deleteOne({ email: normalizedEmail });
     user.password = undefined;
 
     return res.status(200).json({
@@ -164,9 +187,19 @@ exports.login = async (req, res) => {
 // **Send OTP for Email Verification**
 exports.sendotp = async (req, res) => {
   try {
-    const { email } = req.body;
+    const {
+      firstName,
+      lastName,
+      email,
+      password,
+      contactNumber,
+      gender,
+      dateOfBirth,
+      college,
+    } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
 
-    if (!email) {
+    if (!normalizedEmail) {
       return res.status(400).json({
         success: false,
         message: "Email is required",
@@ -174,11 +207,55 @@ exports.sendotp = async (req, res) => {
     }
 
     // Check if user exists
-    const checkUserPresent = await User.findOne({ email });
+    const checkUserPresent = await User.findOne({ email: normalizedEmail });
     if (checkUserPresent) {
       return res.status(401).json({
         success: false,
         message: "User is already registered",
+      });
+    }
+
+    const hasSignupPayload = Boolean(firstName || lastName || password || contactNumber || gender || dateOfBirth || college);
+
+    if (hasSignupPayload) {
+      if (!firstName || !lastName || !password || !gender || !dateOfBirth || !college) {
+        return res.status(400).json({
+          success: false,
+          message: "All required signup fields are required before sending OTP",
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+      await PendingSignup.findOneAndUpdate(
+        { email: normalizedEmail },
+        {
+          firstName,
+          lastName,
+          email: normalizedEmail,
+          hashedPassword,
+          contactNumber: contactNumber || "",
+          gender,
+          dateOfBirth,
+          college,
+          createdAt: new Date(),
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    } else {
+      const pendingSignup = await PendingSignup.findOne({ email: normalizedEmail });
+      if (!pendingSignup) {
+        return res.status(400).json({
+          success: false,
+          message: "Signup session expired. Please fill the signup form again.",
+        });
+      }
+    }
+
+    const latestOtp = await OTP.findOne({ email: normalizedEmail }).sort({ createdAt: -1 });
+    if (latestOtp && Date.now() - latestOtp.createdAt.getTime() < 60 * 1000) {
+      return res.status(429).json({
+        success: false,
+        message: "Please wait before requesting another OTP",
       });
     }
 
@@ -196,7 +273,8 @@ exports.sendotp = async (req, res) => {
       if (!existingOtp) isUnique = true;
     }
 
-    await OTP.create({ email, otp });
+    await OTP.deleteMany({ email: normalizedEmail });
+    await OTP.create({ email: normalizedEmail, otp });
 
     res.status(200).json({
       success: true,

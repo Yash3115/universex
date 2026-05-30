@@ -1,6 +1,8 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const fileUpload = require("express-fileupload");
@@ -29,6 +31,8 @@ connectDB();
 
 //cloudinary connection
 cloudinaryConnect();
+
+app.use(helmet());
 
 // Middleware Setup
 app.use(
@@ -64,12 +68,23 @@ app.options("*", cors(corsoptions));
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(cookieParser());
 
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: Number(process.env.AUTH_RATE_LIMIT_MAX) || 25,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: "Too many auth attempts. Please try again later." },
+});
+
 // Test Route (No Authentication Required)
 app.get("/api/test", (req, res) => {
   res.send("Hello, API is working!");
 });
 
 // API Routes
+app.use("/api/users/login", authRateLimiter);
+app.use("/api/users/sendotp", authRateLimiter);
+app.use("/api/users/signup", authRateLimiter);
 app.use("/api/users", userRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/posts", postRoutes);

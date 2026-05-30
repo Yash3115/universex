@@ -5,6 +5,7 @@ import api from "../services/api";
 import { useDispatch, useSelector } from "react-redux";
 import { deletePost } from "../features/posts/postsSlice";
 import { toast } from "react-toastify";
+import ConfirmDialog from "./ConfirmDialog";
 
 const PostCard = ({ post, allowUpdate = false }) => {
   const user = useSelector((state) => state.auth.user);
@@ -12,6 +13,7 @@ const PostCard = ({ post, allowUpdate = false }) => {
   const [openReportBox, setOpenReportBox] = useState(false);
   const [likes, setLikes] = useState(post?.likes?.length || 0);
   const [isLiked, setIsLiked] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -21,7 +23,7 @@ const PostCard = ({ post, allowUpdate = false }) => {
 
   const handleLike = async () => {
     if (!user) {
-      alert("You need to log in to like posts!");
+      toast.info("Please log in to like posts.");
       return;
     }
 
@@ -40,10 +42,10 @@ const PostCard = ({ post, allowUpdate = false }) => {
 
   const handleDelete = async () => {
     if (!post?._id) return;
-    if (!window.confirm("Are you sure you want to delete this post?")) return;
 
     try {
       await dispatch(deletePost(post._id)).unwrap();
+      setDeleteDialogOpen(false);
       toast.success("Post deleted successfully");
     } catch (error) {
       toast.error(error || "Failed to delete post");
@@ -62,7 +64,7 @@ const PostCard = ({ post, allowUpdate = false }) => {
             <FaEdit size={18} />
           </button> */}
           <button
-            onClick={handleDelete}
+            onClick={() => setDeleteDialogOpen(true)}
             className="hover:text-red-600 transition-colors duration-200"
           >
             <FaTrash size={18} />
@@ -170,6 +172,15 @@ const PostCard = ({ post, allowUpdate = false }) => {
       )}
 
       {showComment && <CommentBox postId={post?._id} />}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        title="Delete this post?"
+        message="This will permanently remove the post and its comments. This action cannot be undone."
+        confirmText="Delete post"
+        variant="danger"
+        onCancel={() => setDeleteDialogOpen(false)}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };

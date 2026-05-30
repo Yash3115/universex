@@ -13,7 +13,6 @@ function CommunitySideBar() {
     { name: "Jobs & Opportunities", route: "/jobs" },
     { name: "Budget Tracker", route: "/budget" },
     { name: "Class Routine", route: "/class" },
-    { name: "Attendance Tracker", route: "/attendance" },
   ];
 
   return (

@@ -75,7 +75,7 @@ const SignUp = () => {
     try {
       const response = await api.post(
         "/api/users/sendotp",
-        {email:formData.email},
+        formData,
         {
           headers: { "Content-Type": "application/json" },
         }
@@ -84,7 +84,7 @@ const SignUp = () => {
       const res = response.data;
       
       if(res.success){
-        localStorage.setItem("user-data",JSON.stringify(formData));
+        sessionStorage.setItem("pending-signup-email", formData.email);
         toast.success("OTP sent successfully");
         navigate("/otp")
       }
