@@ -2,11 +2,27 @@ const Transaction = require("../models/transactionSchema");
 const User = require("../models/userSchema");
 const categorizeExpense = require("../utils/aiCategorization");
 
+const parsePositiveAmount = (amount) => {
+  const numericAmount = Number(amount);
+  return Number.isFinite(numericAmount) && numericAmount > 0 ? numericAmount : null;
+};
+
+const isSupportedType = (type) => ["credit", "debit"].includes(type);
+
 // ✅ Add Transaction & Update Balance
 exports.addTransaction = async (req, res) => {
   try {
-    const { amount, description, type,category } = req.body;
-    // const category = categorizeExpense(description);
+    const { amount, description, type, category } = req.body;
+    const numericAmount = parsePositiveAmount(amount);
+
+    if (!numericAmount || !description || !isSupportedType(type)) {
+      return res.status(400).json({
+        success: false,
+        message: "A positive amount, description, and valid type are required",
+      });
+    }
+
+    const normalizedCategory = category || categorizeExpense(description) || "other";
     const user = await User.findById(req.user.id);
 
     if (!user) {
@@ -15,16 +31,16 @@ exports.addTransaction = async (req, res) => {
 
     const newTransaction = new Transaction({
       userId: req.user.id,
-      amount,
+      amount: numericAmount,
       description,
       type,
-      category,
+      category: normalizedCategory,
     });
 
     await newTransaction.save();
 
     // Update User Balance
-    user.balance = type === "credit" ? user.balance + amount : user.balance - amount;
+    user.balance = type === "credit" ? user.balance + numericAmount : user.balance - numericAmount;
     await user.save();
 
     res.status(201).json({ success:true, transaction: newTransaction, balance: user.balance });
@@ -38,6 +54,10 @@ exports.removeTransaction = async (req, res) => {
   try {
     const transaction = await Transaction.findById(req.params.id);
     if (!transaction) return res.status(404).json({ message: "Transaction not found" });
+
+    if (transaction.userId.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Unauthorized to delete this transaction" });
+    }
 
     const user = await User.findById(transaction.userId);
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -56,14 +76,30 @@ exports.removeTransaction = async (req, res) => {
 // ✅ Update Transaction & Adjust Balance
 exports.updateTransaction = async (req, res) => {
     try {
-        const { amount, description, type } = req.body;
+        const { amount, description, type, category } = req.body;
         const transaction = await Transaction.findById(req.params.id);
 
         if (!transaction) {
             return res.status(404).json({ message: "Transaction not found" });
         }
 
+        if (transaction.userId.toString() !== req.user.id) {
+            return res.status(403).json({ message: "Unauthorized to update this transaction" });
+        }
+
         const user = await User.findById(transaction.userId);
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        if (type && !isSupportedType(type)) {
+            return res.status(400).json({ message: "Invalid transaction type" });
+        }
+
+        const nextAmount = amount === undefined ? transaction.amount : parsePositiveAmount(amount);
+        if (!nextAmount) {
+            return res.status(400).json({ message: "Amount must be a positive number" });
+        }
         
         // Adjust balance before updating
         if (transaction.type === "credit") {
@@ -76,10 +112,10 @@ exports.updateTransaction = async (req, res) => {
         const updatedDescription = description || transaction.description;
 
         // Update transaction
-        transaction.amount = amount || transaction.amount;
+        transaction.amount = nextAmount;
         transaction.description = updatedDescription;
         transaction.type = type || transaction.type;
-        transaction.category = categorizeExpense(updatedDescription); 
+        transaction.category = category || categorizeExpense(updatedDescription) || transaction.category; 
 
         await transaction.save();
 
@@ -102,7 +138,7 @@ exports.updateTransaction = async (req, res) => {
 // ✅ Show All Transactions & Balance
 exports.showAllTransactions = async (req, res) => {
   try {
-    const transactions = await Transaction.find({ userId: req.user.id });
+    const transactions = await Transaction.find({ userId: req.user.id }).sort({ date: -1 });
     const user = await User.findById(req.user.id);
     
     if (!user) {

@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import { FaCameraRetro } from "react-icons/fa";
 import { IoClose } from "react-icons/io5";
-import axios from "axios";
+import { useDispatch } from "react-redux";
+import { createPost } from "../features/posts/postsSlice";
 
 const CreatePost = ({ onClose }) => {
+  const dispatch = useDispatch();
   const [caption, setCaption] = useState("");
   const [image, setImage] = useState(null);
   const [file, setFile] = useState(null);
@@ -13,12 +15,19 @@ const CreatePost = ({ onClose }) => {
   const handleImageChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile && selectedFile.type.startsWith("image/")) {
+      if (image) URL.revokeObjectURL(image);
       setImage(URL.createObjectURL(selectedFile));
       setFile(selectedFile);
     } else {
       setError("Only image files are allowed.");
     }
   };
+
+  useEffect(() => {
+    return () => {
+      if (image) URL.revokeObjectURL(image);
+    };
+  }, [image]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -37,33 +46,27 @@ const CreatePost = ({ onClose }) => {
     }
 
     try {
-      const API_URL ="https://universex-m5nn.vercel.app";
-      const response = await axios.post(`${API_URL}/api/posts`, formData, {
-        withCredentials: true,
-      });
-
-      console.log("Post created:", response.data);
+      await dispatch(createPost(formData)).unwrap();
       setCaption("");
       setImage(null);
       setFile(null);
-      onClose();
+      onClose?.();
     } catch (error) {
-      console.error("Error creating post:", error);
-      setError("Failed to create post. Please try again.");
+      setError(error || "Failed to create post. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-md">
-      <div className="bg-white w-full mx-4 max-w-lg rounded-lg shadow-lg overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-3 backdrop-blur-md sm:items-center">
+      <div className="w-full max-w-lg overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
         {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-semibold">Create Post</h2>
+        <div className="flex items-center justify-between border-b p-4">
+          <h2 className="text-xl font-black text-gray-900">Create Post</h2>
           <button
             onClick={() => !loading && onClose()}
-            className="text-gray-500 hover:text-black"
+            className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-black"
           >
             <IoClose size={24} />
           </button>
@@ -81,15 +84,15 @@ const CreatePost = ({ onClose }) => {
               setCaption(e.target.value);
               if (error) setError("");
             }}
-            className="w-full p-2 border rounded-md resize-none focus:outline-none"
+            className="w-full resize-none rounded-2xl border p-3 focus:outline-none focus:ring-2 focus:ring-blue-200"
             rows="3"
           />
 
           {/* Image Upload */}
           {image ? (
-            <img src={image} alt="Preview" className="mt-3 max-w-full max-h-60 mx-auto rounded-lg object-contain" />
+            <img src={image} alt="Preview" className="mx-auto mt-3 max-h-60 max-w-full rounded-2xl object-contain" />
           ) : (
-            <label className="flex flex-col items-center justify-center w-full h-40 bg-gray-100 border border-dashed rounded-lg cursor-pointer mt-3">
+            <label className="mt-3 flex h-44 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-100 bg-blue-50/60 transition hover:bg-blue-50">
               <FaCameraRetro size={40} className="text-gray-400" />
               <span className="text-gray-500 text-sm">
                 Click to upload an image
@@ -106,7 +109,7 @@ const CreatePost = ({ onClose }) => {
           {/* Post Button */}
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white px-4 py-2 mt-4 rounded-md font-semibold hover:bg-blue-600 disabled:bg-gray-400"
+            className="mt-4 w-full rounded-2xl bg-blue-600 px-4 py-3 font-bold text-white hover:bg-blue-700 disabled:bg-gray-400"
             onClick={handleSubmit}
             disabled={loading}
           >

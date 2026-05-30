@@ -8,6 +8,7 @@ import OTPVerification from "./OtpPage";
 import ProfilePage from "./ProfilePage";
 import Dashboard from "./Dashboard";
 import ContactDirectory from "./ContactDirectory";
+import JobsPage from "./JobsPage";
 
 export {
   BudgetTracker,
@@ -19,5 +20,6 @@ export {
   OTPVerification,
   ProfilePage,
   Dashboard,
-  ContactDirectory
+  ContactDirectory,
+  JobsPage
 };

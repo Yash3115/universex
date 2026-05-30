@@ -1,7 +1,7 @@
-import axios from "axios";
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import api from "../services/api";
 
 const OTPVerification = () => {
   const [otp, setOtp] = useState(["", "", "", ""]);
@@ -9,42 +9,47 @@ const OTPVerification = () => {
   const navigate = useNavigate();
 
   const handleChange = (index, value) => {
+    if (!/^\d?$/.test(value)) return;
     if (value.length > 1) return;
     let newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
     if (value && index < otp.length - 1) {
-      inputRefs.current[index + 1].focus();
+      inputRefs.current[index + 1]?.focus();
     }
   };
 
   const handleKeyDown = (index, event) => {
     if (event.key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
+      inputRefs.current[index - 1]?.focus();
     }
   };
   useEffect(()=>{
     if(!localStorage.getItem("user-data")){
-      navigate("/signup");
+      navigate("/signup", { replace: true });
     }
-
-    return()=>{
-      if(localStorage.getItem("user-data")){
-        localStorage.removeItem("user-data");
-      }
-    }
-  },[])
+  },[navigate])
   const verifyOtp = async() => {
     try {
-      const formData = JSON.parse(localStorage.getItem("user-data"));
+      const storedUserData = localStorage.getItem("user-data");
+      if (!storedUserData) {
+        toast.error("Signup session expired. Please sign up again.");
+        navigate("/signup", { replace: true });
+        return;
+      }
+
+      const formData = JSON.parse(storedUserData);
       const otp2 = otp.join("");
+      if (otp2.length !== 4) {
+        toast.error("Please enter the complete OTP");
+        return;
+      }
       formData.otp=otp2;
-      const res = await axios.post(
-        "https://universex-m5nn.vercel.app/api/users/signup",
+      const res = await api.post(
+        "/api/users/signup",
           formData,
         {
-          withCredentials: true,
           headers: { "Content-Type": "application/json" },
         }
       )
@@ -59,21 +64,30 @@ const OTPVerification = () => {
       }
       
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "OTP verification failed");
     }
   };
   const handleResendOTP= async()=>{
-    const formData = localStorage.getItem("user-data");
-    const response = await axios.post(
-      "https://universex-m5nn.vercel.app/api/users/sendotp",
-      formData,
-      {
-        withCredentials: true,
-        headers: { "Content-Type": "application/json" },
+    try {
+      const storedUserData = localStorage.getItem("user-data");
+      if (!storedUserData) {
+        toast.error("Signup session expired. Please sign up again.");
+        navigate("/signup", { replace: true });
+        return;
       }
-    )
-    const res = response.data;
-    console.log(res);
+
+      const formData = JSON.parse(storedUserData);
+      const response = await api.post(
+        "/api/users/sendotp",
+        { email: formData.email },
+        {
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+      toast.success(response.data.message || "OTP resent successfully");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to resend OTP");
+    }
   }
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-100 p-4">

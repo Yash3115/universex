@@ -1,8 +1,4 @@
-import React from "react";
-import { useSelector } from "react-redux";
-
 const Landing = () => {
-  // const isAuthenticated = useSelector
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}

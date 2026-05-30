@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Calendar from "react-calendar";
 import { toast } from "react-toastify";
 import "react-calendar/dist/Calendar.css";
@@ -21,7 +21,6 @@ const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Sat
 const ClassRoutine = () => {
   const [date, setDate] = useState(new Date());
   const [attendance, setAttendance] = useState({});
-  const [submittedAttendance, setSubmittedAttendance] = useState({});
   const [subjectAttendance, setSubjectAttendance] = useState({});
   const navigate = useNavigate();
 
@@ -36,11 +35,6 @@ const ClassRoutine = () => {
   };
 
   const handleSubmitAttendance = () => {
-    setSubmittedAttendance((prev) => ({
-      ...prev,
-      ...attendance,
-    }));
-
     let subjectStats = {};
     Object.values(attendance).forEach((day) => {
       Object.entries(day).forEach(([subject, status]) => {
@@ -70,7 +64,7 @@ const ClassRoutine = () => {
       <div className="mt-4 md:flex md:space-x-4 space-y-4 md:space-y-0">
         <Calendar className="border rounded-lg p-2" onChange={setDate} value={date} />
         <div className="p-4 border rounded-lg shadow-md w-full">
-          <h2 className="text-xl font-semibold">{selectedDay}'s Classes</h2>
+          <h2 className="text-xl font-semibold">Classes for {selectedDay}</h2>
           {subjectsForSelectedDay.length > 0 ? (
             subjectsForSelectedDay.map((subject, index) => (
               <div key={index} className="mt-2 p-2 bg-gray-200 rounded flex justify-between items-center">

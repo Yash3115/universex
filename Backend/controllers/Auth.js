@@ -6,6 +6,10 @@ const OTP = require("../models/otp");
 const mailSender = require("../utils/mailSender");
 const { passwordUpdated } = require("../mail/templates/passwordUpdate");
 const Profile = require("../models/profileSchema");
+const {
+  getAuthCookieOptions,
+  getClearAuthCookieOptions,
+} = require("../utils/cookieOptions");
 require("dotenv").config();
 
 // **Signup Controller for Registering Users**
@@ -39,7 +43,6 @@ exports.signup = async (req, res) => {
         message: "All fields are required",
       });
     }
-    console.log(otp);
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
@@ -79,10 +82,15 @@ exports.signup = async (req, res) => {
       contactNumber,
       password: hashedPassword,
       college,
+      gender,
+      dateOfBirth,
       additionalDetails: profileDetails._id,
       role: "Student",
       image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpmteUFDtMLPVMxqUwYc5I7vMhEi8RKQznPSeSMKZ_FG5DBWGDs25O8cK7N10GhNudeRY&usqp=CAU",
     });
+
+    await OTP.deleteMany({ email });
+    user.password = undefined;
 
     return res.status(200).json({
       success: true,
@@ -94,7 +102,6 @@ exports.signup = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "User registration failed. Please try again.",
-      error: error.message, // Include error message for debugging
     });
   }
 };
@@ -129,13 +136,9 @@ exports.login = async (req, res) => {
         { expiresIn: "24h" }
       );
 
-      user.token = token;
       user.password = undefined;
 
-      res.cookie("token", token, {
-        expires: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
-        httpOnly: true,
-      });
+      res.cookie("token", token, getAuthCookieOptions());
 
       return res.status(200).json({
         success: true,
@@ -162,6 +165,13 @@ exports.login = async (req, res) => {
 exports.sendotp = async (req, res) => {
   try {
     const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required",
+      });
+    }
 
     // Check if user exists
     const checkUserPresent = await User.findOne({ email });
@@ -191,11 +201,10 @@ exports.sendotp = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "OTP sent successfully",
-      otp,
     });
   } catch (error) {
-    console.log("Error in sendotp:", error.message);
-    return res.status(500).json({ success: false, error: error.message });
+    console.error("Error in sendotp:", error.message);
+    return res.status(500).json({ success: false, message: "Failed to send OTP" });
   }
 };
 
@@ -204,6 +213,13 @@ exports.changePassword = async (req, res) => {
   try {
     const userDetails = await User.findById(req.user.id);
     const { oldPassword, newPassword } = req.body;
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Old password and new password are required",
+      });
+    }
 
     if (!(await bcrypt.compare(oldPassword, userDetails.password))) {
       return res.status(401).json({
@@ -266,13 +282,7 @@ exports.getBalance = async (req, res) => {
 
 exports.getUser = async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) {
-      return res.status(401).json({ success: false, message: "Not authenticated" });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password").populate("additionalDetails");
+    const user = await User.findById(req.user.id).select("-password").populate("additionalDetails");
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
@@ -288,6 +298,6 @@ exports.getUser = async (req, res) => {
 
 // logout
 exports.logout = (req, res) => {
-  res.clearCookie("token", { httpOnly: true, secure: true, sameSite: "None" });
+  res.clearCookie("token", getClearAuthCookieOptions());
   return res.status(200).json({ success: true, message: "Logged out successfully" });
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { FaPaperPlane, FaHeart, FaReply, FaEllipsisH } from "react-icons/fa";
-import axios from "axios";
 import { useSelector } from "react-redux";
+import api from "../services/api";
 
 const CommentBox = ({ postId }) => {
   const user = useSelector((state) => state.auth.user);
@@ -12,7 +12,7 @@ const CommentBox = ({ postId }) => {
   // ✅ Memoize fetchComments to prevent infinite loops
   const fetchComments = useCallback(async () => {
     try {
-      const res = await axios.get(`https://universex-m5nn.vercel.app/api/comments/${postId}/comments`);
+      const res = await api.get(`/api/comments/${postId}/comments`);
       setComments(res.data.comments);
     } catch (err) {
       console.error("Error fetching comments:", err);
@@ -29,8 +29,8 @@ const CommentBox = ({ postId }) => {
 
     setLoading(true);
     try {
-      await axios.post(
-        `https://universex-m5nn.vercel.app/api/comments/${postId}/comments`,
+      await api.post(
+        `/api/comments/${postId}/comments`,
         { content: newComment },
         { withCredentials: true }
       );
@@ -46,7 +46,7 @@ const CommentBox = ({ postId }) => {
     <div className="bg-white p-4 rounded-lg border my-2 border-gray-300">
       {/* Comment Input Box */}
       <div className="flex items-center gap-3 border rounded-full px-3 py-2 mb-4">
-        <img src={user.image} alt="User" className="w-10 h-10 rounded-full" />
+        <img src={user?.image || "https://cdn-icons-png.flaticon.com/512/6596/6596121.png"} alt="User" className="w-10 h-10 rounded-full" />
         <input
           type="text"
           placeholder="Add a comment..."

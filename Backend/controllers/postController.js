@@ -1,14 +1,12 @@
 const Post = require("../models/postSchema");
 const User = require("../models/userSchema");
 const Comment = require("../models/commentSchema");
-// const cloudinary = require("../config/cloudinary");
-const cloudinary = require('cloudinary').v2;
 const {uploadImageToCloudinary} = require("../utils/imageUploader");
 
 // 📌 Create a new post
 exports.createPost = async (req, res) => {
     try {
-        const { content } = req.body;
+        const content = req.body.content?.trim();
         const userId = req.user.id;
 
         if (!content) {
@@ -39,6 +37,7 @@ exports.createPost = async (req, res) => {
         });
 
         await post.save();
+        await post.populate("user", "firstName lastName image");
 
         res.status(201).json({ success: true, message: "Post created successfully", post });
 
@@ -51,7 +50,8 @@ exports.createPost = async (req, res) => {
 // 📌 Get all posts with comments and user details
 exports.getPosts = async (req, res) => {
     try {
-        const { page = 1, limit = 10 } = req.query;
+        const pageNumber = Math.max(parseInt(req.query.page, 10) || 1, 1);
+        const pageSize = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 50);
 
         const posts = await Post.find()
             .populate("user", "firstName lastName image")
@@ -60,8 +60,8 @@ exports.getPosts = async (req, res) => {
                 populate: { path: "user", select: "firstName lastName image" }
             })
             .sort({ createdAt: -1 })
-            .skip((page - 1) * limit)
-            .limit(parseInt(limit));
+            .skip((pageNumber - 1) * pageSize)
+            .limit(pageSize);
 
         const totalPosts = await Post.countDocuments();
 
@@ -70,8 +70,8 @@ exports.getPosts = async (req, res) => {
             message: "Posts fetched successfully",
             posts,
             pagination: {
-                currentPage: parseInt(page),
-                totalPages: Math.ceil(totalPosts / limit),
+                currentPage: pageNumber,
+                totalPages: Math.ceil(totalPosts / pageSize),
                 totalPosts,
             },
         });
@@ -94,15 +94,6 @@ exports.deletePost = async (req, res) => {
             return res.status(403).json({ success: false, message: "Unauthorized to delete this post" });
         }
 
-        // if (post.image) {
-        //     const publicId = post.image.split("/").pop().split(".")[0];
-        //     // await cloudinary.uploader.destroy(`posts/${publicId}`);
-        //     // console.log(await cloudinary.uploader.destroy());
-            
-        //     // cloudinary.api.delete_resources([publicId], function(result) { console.log(result) });
-        //     cloudinary.uploader.destroy(`${publicId}`, function(result) { console.log(result) });
-        // }
-
         await Comment.deleteMany({ post: post._id }); // Delete associated comments
         await post.deleteOne();
 
@@ -119,13 +110,12 @@ exports.likePost = async (req, res) => {
     try {
         const { id } = req.params; // Post ID
         const userId = req.user.id;
-        console.log("hi");
         const post = await Post.findById(id);
         if (!post) {
             return res.status(404).json({ success: false, message: "Post not found" });
         }
 
-        const isLiked = post.likes.includes(userId);
+        const isLiked = post.likes.some((id) => id.toString() === userId);
 
         if (isLiked) {
             post.likes = post.likes.filter(id => id.toString() !== userId);
@@ -147,4 +137,5 @@ exports.likePost = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
 

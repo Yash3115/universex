@@ -17,15 +17,26 @@ const ProfilePage = () => {
     }
   }, [dispatch, postStatus]); // Fetch only if posts are not already loaded
 
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+        <div className="mx-auto max-w-5xl rounded-3xl bg-white p-8 text-center shadow-xl">
+          <p className="font-semibold text-gray-500">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const details = user.additionalDetails || {};
+
   return (
-    <div className="max-w-5xl mx-auto p-6">
-      {/* Profile Section */}
-      <div className="flex w-full items-start gap-6 border-b pb-6">
-        {/* Profile Image */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="flex w-full flex-col items-center gap-6 rounded-[2rem] bg-white p-6 text-center shadow-2xl shadow-slate-200/70 sm:flex-row sm:text-left">
         <div className="avatar">
-          <div className="md:w-32 w-24 rounded-full overflow-hidden border-2 border-gray-300">
+          <div className="h-28 w-28 overflow-hidden rounded-full border-4 border-blue-100 shadow-lg md:h-32 md:w-32">
             <img
-              src={user.image}
+              src={user.image || "https://cdn-icons-png.flaticon.com/512/6596/6596121.png"}
               alt="Profile"
               className="object-cover w-full h-full"
             />
@@ -37,13 +48,13 @@ const ProfilePage = () => {
           <h2 className="text-2xl font-bold">
             {user.firstName} {user.lastName}
           </h2>
-          <p className="text-gray-600 mt-1">{user.additionalDetails.about}</p>
+          <p className="mt-1 text-gray-600">{details.about || "No bio added yet."}</p>
 
           {/* Social Links & Contact */}
           <div className="flex flex-wrap justify-start gap-4 mt-4">
-            {user.additionalDetails.insta && (
+            {details.insta && (
               <a
-                href={user.additionalDetails.insta}
+                href={details.insta}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-pink-500 flex items-center gap-2 hover:underline"
@@ -52,9 +63,9 @@ const ProfilePage = () => {
                 Instagram
               </a>
             )}
-            {user.additionalDetails.linkedin && (
+            {details.linkedin && (
               <a
-                href={user.additionalDetails.linkedin}
+                href={details.linkedin}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-500 flex items-center gap-2 hover:underline"
@@ -63,10 +74,10 @@ const ProfilePage = () => {
                 LinkedIn
               </a>
             )}
-            {user.additionalDetails.contactNumber && (
+            {details.contactNumber && (
               <p className="text-gray-800 flex items-center gap-2">
                 <FaPhone />
-                {user.additionalDetails.contactNumber}
+                {details.contactNumber}
               </p>
             )}
           </div>
@@ -74,8 +85,8 @@ const ProfilePage = () => {
       </div>
 
       {/* Posts Section */}
-      <div className="mt-6">
-        <h3 className="text-xl font-semibold mb-4">Your Posts</h3>
+      <div className="rounded-[2rem] bg-white p-5 shadow-xl shadow-slate-200/70">
+        <h3 className="mb-4 text-xl font-black text-gray-900">Your Posts</h3>
         <main className="w-full">
           {/* Loading & Error States */}
           {postStatus === "loading" && (
@@ -93,9 +104,10 @@ const ProfilePage = () => {
               ))}
             </div>
           ) : (
-            <p className="text-center text-gray-500">No posts available</p>
+            postStatus === "succeeded" && <p className="rounded-2xl bg-gray-50 p-6 text-center text-gray-500">No posts available</p>
           )}
         </main>
+      </div>
       </div>
     </div>
   );

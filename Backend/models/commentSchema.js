@@ -14,8 +14,6 @@ const commentSchema = new mongoose.Schema(
 // 📌 Middleware to delete all nested replies when a comment is deleted
 commentSchema.pre("deleteOne", { document: true, query: false }, async function (next) {
     try {
-        console.log(`Deleting comment and its replies: ${this._id}`);
-
         // Recursively delete all replies associated with this comment
         await mongoose.model("Comment").deleteMany({ parentComment: this._id });
 

@@ -26,9 +26,10 @@ async function sendVerificationEmail(email, otp) {
 			"Verification Email",
 			emailTemplate(otp)
 		);
-		console.log("✅ Email sent successfully:", mailResponse.response);
+		return mailResponse;
 	} catch (error) {
 		console.error("❌ Error sending email:", error.message);
+		throw error;
 	}
 }
 
@@ -37,7 +38,6 @@ OTPSchema.pre("save", async function (next) {
 	if (!this.isNew) return next(); // Only send email for new documents
 
 	try {
-		console.log("📩 Sending verification email to:", this.email);
 		await sendVerificationEmail(this.email, this.otp);
 		next();
 	} catch (error) {

@@ -1,4 +1,3 @@
-import React from "react";
 import { FiTrash } from "react-icons/fi";
 
 const TransactionData = ({ transactions, onDelete }) => {
@@ -24,7 +23,7 @@ const TransactionData = ({ transactions, onDelete }) => {
                 {type === "credit" ? "+" : "-"}₹{amount}
               </span>
               <button
-                onClick={() => onDelete(_id, type, amount)}
+                onClick={() => onDelete(_id)}
                 className="btn btn-sm btn-error ml-4 rounded-full"
               >
                 <FiTrash size={16} />

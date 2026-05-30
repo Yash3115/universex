@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "../../services/api";
 import { toast } from "react-toastify";
 
 // LOGIN
@@ -7,8 +7,8 @@ export const login = createAsyncThunk(
   "auth/login",
   async (data, { rejectWithValue }) => {
     try {
-      const response = await axios.post(
-        "https://universex-m5nn.vercel.app/api/users/login",
+      const response = await api.post(
+        "/api/users/login",
         data,
         {
           withCredentials: true,
@@ -28,8 +28,8 @@ export const getUser = createAsyncThunk(
   "auth/getUser",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(
-        "https://universex-m5nn.vercel.app/api/users/getUser",
+      const response = await api.get(
+        "/api/users/getUser",
         {
           withCredentials: true,
         }
@@ -46,8 +46,8 @@ export const logout = createAsyncThunk(
   "auth/logout",
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axios.get(
-        "https://universex-m5nn.vercel.app/api/users/logout",
+      const response = await api.get(
+        "/api/users/logout",
         {
           withCredentials: true,
         }
@@ -65,8 +65,8 @@ export const updateProfileImage = createAsyncThunk(
   "auth/updateProfileImage",
   async (formData, { rejectWithValue }) => {
     try {
-      const response = await axios.put(
-        "https://universex-m5nn.vercel.app/api/profile/updateDisplayPicture",
+      const response = await api.put(
+        "/api/profile/updateDisplayPicture",
         formData,
         {
           withCredentials: true,
@@ -88,18 +88,18 @@ export const updateProfile = createAsyncThunk(
   "auth/updateProfile",
   async (data, { rejectWithValue }) => {
     try {
-      const response = await axios.put(
-        "https://universex-m5nn.vercel.app/api/profile/updateProfile",
+      const response = await api.put(
+        "/api/profile/updateProfile",
         data,
         {
           withCredentials: true,
           headers: { "Content-Type": "application/json" },
         }
       );
-      console.log(response.data)
-      {response.data.success ? 
-        toast.success(response.data.message):
-        toast.error(response.data.message)
+      if (response.data.success) {
+        toast.success(response.data.message);
+      } else {
+        toast.error(response.data.message);
       }
       return response.data;
 
@@ -140,7 +140,6 @@ const authSlice = createSlice({
         state.loading = false;
         state.isAuthenticated = true;
         state.user = action.payload.user;
-        console.log(action.payload.user);
       })
       .addCase(getUser.rejected, (state) => {
         state.loading = false;
@@ -148,6 +147,7 @@ const authSlice = createSlice({
         state.user = null;
       })
       .addCase(logout.fulfilled, (state) => {
+        state.loading = false;
         state.isAuthenticated = false;
         state.user = null;
       })
@@ -155,9 +155,7 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(updateProfileImage.fulfilled, (state, action) => {
-        if (state.user) {
-          state.user.image = action.payload.data.image;
-        }
+        state.user = action.payload.data || state.user;
       })
       .addCase(updateProfileImage.rejected, (state, action) => {
         state.error =
@@ -167,7 +165,8 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
-        if (state.user) {
+        state.user = action.payload.user || action.payload.updatedUserDetails || state.user;
+        if (state.user && action.payload.data) {
           state.user.additionalDetails = action.payload.data;
         }
       })

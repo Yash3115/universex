@@ -15,7 +15,7 @@ exports.resetPasswordToken = async (req, res) => {
 		}
 		const token = crypto.randomBytes(20).toString("hex");
 
-		const updatedDetails = await User.findOneAndUpdate(
+		await User.findOneAndUpdate(
 			{ email: email },
 			{
 				token: token,
@@ -23,9 +23,8 @@ exports.resetPasswordToken = async (req, res) => {
 			},
 			{ new: true }
 		);
-		console.log("DETAILS", updatedDetails);
-
-		const url = `http://localhost:3000/update-password/${token}`;
+		const frontendUrl = (process.env.FRONTEND_URL || "http://localhost:5173").replace(/\/$/, "");
+		const url = `${frontendUrl}/update-password/${token}`;
 
 		await mailSender(
 			email,
@@ -73,7 +72,10 @@ exports.resetPassword = async (req, res) => {
 		const encryptedPassword = await bcrypt.hash(password, 10);
 		await User.findOneAndUpdate(
 			{ token: token },
-			{ password: encryptedPassword },
+			{
+				$set: { password: encryptedPassword },
+				$unset: { token: "", resetPasswordExpires: "" },
+			},
 			{ new: true }
 		);
 		res.json({

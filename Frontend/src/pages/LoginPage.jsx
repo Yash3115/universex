@@ -1,5 +1,5 @@
 // Login Page is ready.
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -42,9 +42,6 @@ const Login = () => {
       setErrors(validationErrors);
       return;
     }
-
-    // console.log("Login Data Submitted:", formData);
-    // Call API to submit the form and verify the user
     dispatch(login(formData));
 
   };

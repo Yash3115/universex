@@ -40,7 +40,6 @@ const ClassRoutineInput = () => {
 
   // 📤 Submit routine (send to backend later)
   const submitRoutine = () => {
-    console.log("Routine to store in DB:", routine);
     alert("Routine saved successfully!");
     // Here you can make an API call to save the routine in your database
   };

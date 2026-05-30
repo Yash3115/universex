@@ -10,6 +10,9 @@ const userSchema = new mongoose.Schema(
         resetPasswordExpires: {
 			type: Date,
 		},
+        token: {
+            type: String,
+        },
         college: { type: String, required: true },
         image: { type: String}, // Profile picture
         additionalDetails: {

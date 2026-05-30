@@ -1,4 +1,3 @@
-import React from "react";
 import "tailwindcss/tailwind.css";
 import { FaPhoneAlt, FaEnvelope, FaUser } from "react-icons/fa";
 

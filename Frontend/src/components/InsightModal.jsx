@@ -1,10 +1,9 @@
-import React from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 
 const InsightsModal = ({ categoryData }) => {
 
     return (
-        <div className="bg-white rounded-lg p-6 w-2/3 relative">
+        <div className="relative w-full rounded-[2rem] border border-white bg-white/90 p-4 shadow-2xl shadow-slate-200/70 backdrop-blur sm:p-6">
             <h3 className="text-xl font-bold text-center mb-4">Your Insights</h3>
 
             {/* Close Button */}
@@ -13,7 +12,7 @@ const InsightsModal = ({ categoryData }) => {
         </button> */}
 
             {/* Bar Chart */}
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={320}>
                 <BarChart data={categoryData}>
                     <XAxis dataKey="category" />
                     <YAxis />

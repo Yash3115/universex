@@ -4,7 +4,7 @@ const Reaction = require("../models/reactionSchema");
 exports.reactToPost = async (req, res) => {
     try {
         const { type } = req.body;
-        const existingReaction = await Reaction.findOne({ user: req.user.userId, post: req.params.postId });
+        const existingReaction = await Reaction.findOne({ user: req.user.id, post: req.params.postId });
 
         if (existingReaction) {
             existingReaction.type = type;
@@ -12,7 +12,7 @@ exports.reactToPost = async (req, res) => {
             return res.json(existingReaction);
         }
 
-        const reaction = new Reaction({ user: req.user.userId, post: req.params.postId, type });
+        const reaction = new Reaction({ user: req.user.id, post: req.params.postId, type });
         await reaction.save();
         res.status(201).json(reaction);
     } catch (err) {
@@ -23,7 +23,7 @@ exports.reactToPost = async (req, res) => {
 // Remove Reaction
 exports.removeReaction = async (req, res) => {
     try {
-        await Reaction.findOneAndDelete({ user: req.user.userId, post: req.params.postId });
+        await Reaction.findOneAndDelete({ user: req.user.id, post: req.params.postId });
         res.json({ message: "Reaction removed" });
     } catch (err) {
         res.status(500).json({ error: err.message });

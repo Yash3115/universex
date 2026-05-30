@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { getUser } from "./features/auth/authSlice";
 import {
@@ -11,7 +11,8 @@ import {
   OTPVerification,
   ProfilePage,
   Dashboard,
-  ContactDirectory
+  ContactDirectory,
+  JobsPage
 } from "./pages";
 import Navbar from "./components/Navbar";
 import { ToastContainer } from "react-toastify";
@@ -23,15 +24,8 @@ import AuthenticatedRoutes from "./utils/protectedRoutes/AuthenticatedRoutes";
 const App = () => {
   const dispatch = useDispatch();
 
-    // add a functionality here sush that the use effect should only run when the cookie is present in the browser
-
   useEffect(() => {
-    // if (document.cookie.includes("yourCookieName=")) {
-    //   console.log("Cookie is present, running effect...");
-    //   dispatch(getUser());
-    // }
     dispatch(getUser());
-     // Fetch user session on page load
   }, [dispatch]);
 
 
@@ -118,6 +112,14 @@ const App = () => {
           element={
             <AuthenticatedRoutes>
               <Dashboard />
+            </AuthenticatedRoutes>
+          }
+        />
+        <Route
+          path="/jobs"
+          element={
+            <AuthenticatedRoutes>
+              <JobsPage />
             </AuthenticatedRoutes>
           }
         />

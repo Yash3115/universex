@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { FaRegComment, FaThumbsUp, FaFlag, FaEdit, FaTrash } from "react-icons/fa";
+import { useState, useEffect } from "react";
+import { FaRegComment, FaThumbsUp, FaFlag, FaTrash } from "react-icons/fa";
 import CommentBox from "./CommentBox";
-import axios from "axios";
+import api from "../services/api";
 import { useDispatch, useSelector } from "react-redux";
 import { deletePost } from "../features/posts/postsSlice";
+import { toast } from "react-toastify";
 
 const PostCard = ({ post, allowUpdate = false }) => {
   const user = useSelector((state) => state.auth.user);
@@ -14,7 +15,8 @@ const PostCard = ({ post, allowUpdate = false }) => {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    setIsLiked(post?.likes?.includes(user?._id));
+    setLikes(post?.likes?.length || 0);
+    setIsLiked(post?.likes?.some((id) => String(id) === String(user?._id)) || false);
   }, [post?.likes, user?._id]);
 
   const handleLike = async () => {
@@ -24,17 +26,10 @@ const PostCard = ({ post, allowUpdate = false }) => {
     }
 
     try {
-      const { data } = await axios.put(
-        `https://universex-m5nn.vercel.app/api/posts/${post?._id}/like`,
-        {},
-        {
-          withCredentials: true,
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      const { data } = await api.put(`/api/posts/${post?._id}/like`);
 
-      setLikes((prevLikes) => (isLiked ? prevLikes - 1 : prevLikes + 1));
-      setIsLiked((prevIsLiked) => !prevIsLiked);
+      setLikes(data.likesCount ?? data.post?.likes?.length ?? likes);
+      setIsLiked(data.post?.likes?.some((id) => String(id) === String(user?._id)) ?? !isLiked);
     } catch (error) {
       console.error(
         "Error liking post:",
@@ -43,17 +38,16 @@ const PostCard = ({ post, allowUpdate = false }) => {
     }
   };
 
-  const handleEdit = () => {
-    console.log("Edit Post", post?._id);
-    // Add edit post logic here
-  };
-
   const handleDelete = async () => {
-    console.log("Delete Post", post?._id);
-    console.log(post?._id);
-    
-    dispatch(deletePost(post?._id))
-    // Add delete post logic here
+    if (!post?._id) return;
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+
+    try {
+      await dispatch(deletePost(post._id)).unwrap();
+      toast.success("Post deleted successfully");
+    } catch (error) {
+      toast.error(error || "Failed to delete post");
+    }
   };
 
   return (
@@ -162,7 +156,10 @@ const PostCard = ({ post, allowUpdate = false }) => {
                 No
               </button>
               <button
-                onClick={() => console.log("Post reported!")}
+                onClick={() => {
+                  toast.info("Thanks for reporting. Moderation workflow is pending.");
+                  setOpenReportBox(false);
+                }}
                 className="btn bg-red-500 text-white px-4 py-2 rounded-lg ml-2"
               >
                 Yes

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { logout } from "../features/auth/authSlice";
@@ -51,99 +51,132 @@ const Navbar = () => {
 
   const features = [
     { name: "Community", route: "/community" },
-    { name: "Profile", route: "/profile" },
+    { name: "Jobs", route: "/jobs" },
     { name: "Budget", route: "/budget" },
-    { name: "Class Routine", route: "/class" },
-    { name: "Contact Directory", route: "/contactDirectory" },
-    
+    { name: "Routine", route: "/class" },
+    { name: "Directory", route: "/contactDirectory" },
+    { name: "Profile", route: "/profile" },
   ];
 
+  const getLinkClass = (route) =>
+    `cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-all ${
+      location.pathname === route
+        ? "bg-blue-600 text-white shadow-md shadow-blue-200"
+        : "text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+    }`;
+
   return (
-    <nav className="flex justify-between items-center px-6 md:px-12 py-4 shadow-md bg-white w-full relative">
-      <h1
-        className="text-2xl font-bold text-blue-600 cursor-pointer"
-        onClick={() => navigate("/")}
-      >
-        UniVerseX
-      </h1>
+    <nav className="sticky top-0 z-40 w-full border-b border-blue-100 bg-white/90 shadow-sm backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6 lg:px-8">
+        <button
+          type="button"
+          className="group flex items-center gap-2"
+          onClick={() => navigate("/")}
+        >
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-lg font-black text-white shadow-lg shadow-blue-200">
+            U
+          </span>
+          <span className="text-xl font-black tracking-tight text-gray-900 group-hover:text-blue-700 sm:text-2xl">
+            UniVerseX
+          </span>
+        </button>
 
-      {/* Desktop Menu - Centered */}
-      <ul className="hidden md:flex gap-8 text-gray-700 font-medium absolute left-1/2 transform -translate-x-1/2">
-        {features.map((feature, index) => (
-          <li
-            key={index}
-            className={`cursor-pointer transition-all ${location.pathname === feature.route ? "text-blue-600 font-bold" : "hover:text-blue-600"}`}
-            onClick={() => navigate(feature.route)}
-          >
-            {feature.name}
-          </li>
-        ))}
-      </ul>
+        <ul className="hidden items-center gap-1 xl:flex">
+          {features.map((feature) => (
+            <li
+              key={feature.route}
+              className={getLinkClass(feature.route)}
+              onClick={() => navigate(feature.route)}
+            >
+              {feature.name}
+            </li>
+          ))}
+        </ul>
 
-      {/* Mobile Menu and User Avatar */}
-      <div className="flex items-center gap-4">
-        {/* User Avatar - Positioned Top Right in Desktop View */}
+        <div className="flex items-center gap-2 sm:gap-3">
         {isAuthenticated ? (
           <div className="relative">
-            <label
-              tabIndex={0}
-              className="btn btn-ghost btn-circle avatar"
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-full border border-gray-200 bg-white p-1 pr-3 shadow-sm transition hover:border-blue-200 hover:shadow-md"
               onClick={toggleDropdown}
             >
-              <div className="w-10 rounded-full">
-                <img src={userData.userAvatar} alt="User Avatar" />
+              <div className="h-9 w-9 overflow-hidden rounded-full bg-blue-100">
+                <img src={userData.userAvatar} alt="User Avatar" className="h-full w-full object-cover" />
               </div>
-            </label>
+              <span className="hidden max-w-24 truncate text-sm font-semibold text-gray-700 sm:block">
+                {userData.userName}
+              </span>
+            </button>
             {isDropdownOpen && (
-              <ul className="menu menu-sm dropdown-content mt-3 shadow bg-white rounded-lg w-52 absolute right-0 z-50 border border-gray-200">
-                <li className="p-2 text-gray-700 font-semibold">
+              <ul className="absolute right-0 z-50 mt-3 w-56 overflow-hidden rounded-2xl border border-gray-100 bg-white p-2 shadow-xl">
+                <li className="px-3 py-2 text-sm font-bold text-gray-800">
                   {userData.userName}
                 </li>
-                <hr />
-                <li onClick={() => navigate("/dashboard")}>
-                  <a className="hover:bg-gray-200 p-2 cursor-pointer text-blue-500">
-                    Dashboard
-                  </a>
+                <li
+                  onClick={() => {
+                    navigate("/dashboard");
+                    closeDropdown();
+                  }}
+                  className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
+                >
+                  Dashboard
                 </li>
-                <li onClick={handleLogout}>
-                  <a className="hover:bg-gray-200 p-2 cursor-pointer text-red-500">
-                    Logout
-                  </a>
+                <li
+                  onClick={handleLogout}
+                  className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-red-500 hover:bg-red-50"
+                >
+                  Logout
                 </li>
               </ul>
             )}
           </div>
         ) : (
           <button
-            className="hidden md:block bg-orange-500 text-white px-4 py-2 rounded-lg shadow-md hover:bg-orange-600"
+            className="hidden rounded-full bg-gradient-to-r from-orange-500 to-pink-500 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-orange-200 transition hover:scale-105 md:block"
             onClick={handleLogin}
           >
             Login
           </button>
         )}
 
-        {/* Mobile Menu Button */}
-        <button className="md:hidden text-gray-700" onClick={toggleMobileMenu}>
+        <button className="rounded-full p-2 text-gray-700 hover:bg-gray-100 xl:hidden" onClick={toggleMobileMenu}>
           {isMobileMenuOpen ? <AiOutlineClose size={24} /> : <FiMenu size={24} />}
         </button>
       </div>
+      </div>
 
-      {/* Mobile Dropdown Menu */}
       {isMobileMenuOpen && (
-        <ul className="absolute top-16 left-0 w-full bg-white shadow-md py-4 flex flex-col items-center space-y-4 z-50 border-t border-gray-200">
-          {features.map((feature, index) => (
-            <li
-              key={index}
-              className={`cursor-pointer text-lg ${location.pathname === feature.route ? "text-blue-600 font-bold" : "hover:text-blue-600"}`}
+        <div className="border-t border-blue-50 bg-white px-4 py-4 shadow-lg xl:hidden">
+          <div className="mx-auto grid max-w-7xl grid-cols-2 gap-2 sm:grid-cols-3">
+            {features.map((feature) => (
+            <button
+              key={feature.route}
+              type="button"
+              className={`rounded-2xl px-4 py-3 text-left text-sm font-bold transition ${
+                location.pathname === feature.route
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-50 text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+              }`}
               onClick={() => {
                 navigate(feature.route);
                 closeMobileMenu();
               }}
             >
               {feature.name}
-            </li>
+            </button>
           ))}
-        </ul>
+          {!isAuthenticated && (
+            <button
+              type="button"
+              className="rounded-2xl bg-orange-500 px-4 py-3 text-left text-sm font-bold text-white sm:hidden"
+              onClick={handleLogin}
+            >
+              Login
+            </button>
+          )}
+          </div>
+        </div>
       )}
     </nav>
   );

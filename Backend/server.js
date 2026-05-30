@@ -8,11 +8,6 @@ const fileUpload = require("express-fileupload");
 // Import Database Connection
 const connectDB = require("./config/db");
 
-// Import Middleware
-const {
-  authMiddleware,
-  isAuthorised,
-} = require("./middlewares/authMiddleware.js");
 const errorMiddleware = require("./middlewares/errorMiddleware.js");
 
 // Import Routes
@@ -36,26 +31,37 @@ connectDB();
 cloudinaryConnect();
 
 // Middleware Setup
-app.use(fileUpload({ useTempFiles: true, tempFileDir: "/tmp/" })); //shubham
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(
+  fileUpload({
+    useTempFiles: true,
+    tempFileDir: process.env.FILE_UPLOAD_TEMP_DIR || "/tmp/",
+    limits: { fileSize: Number(process.env.MAX_FILE_SIZE_BYTES) || 5 * 1024 * 1024 },
+    abortOnLimit: true,
+  })
+);
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: process.env.JSON_BODY_LIMIT || "1mb" }));
+
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173,https://universex-project.vercel.app")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 const corsoptions = {
-  origin: ["http://localhost:5173","https://universex-project.vercel.app"],
-  methods: ["POST", "GET", "PUT", "DELETE"],
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error("Not allowed by CORS"));
+  },
+  methods: ["POST", "GET", "PUT", "PATCH", "DELETE", "OPTIONS"],
   credentials: true,
 };
 app.use(cors(corsoptions));
-// app.options("*", cors(corsoptions)); // Handle preflight requests
-// app.use((req, res, next) => {
-//   res.header("Access-Control-Allow-Origin", "https://universex-project.vercel.app");
-//   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-//   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-//   res.header("Access-Control-Allow-Credentials", "true");
+app.options("*", cors(corsoptions));
 
-//   next();
-// });
-
-app.use(morgan("dev"));
+app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(cookieParser());
 
 // Test Route (No Authentication Required)

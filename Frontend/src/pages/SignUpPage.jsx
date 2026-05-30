@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { toast } from "react-toastify";
+import api from "../services/api";
 
 const SignUp = () => {
   const navigate = useNavigate();
@@ -38,6 +38,8 @@ const SignUp = () => {
 
     if (!formData.firstName)
       validationErrors.firstName = "First Name is required";
+    if (!formData.lastName)
+      validationErrors.lastName = "Last Name is required";
     if (!formData.email) {
       validationErrors.email = "Email is required";
     } else {
@@ -70,38 +72,27 @@ const SignUp = () => {
       return;
     }
 
-    console.log("Sign Up Form Data Submitted:", formData);
-    localStorage.setItem("user-data",JSON.stringify(formData));
-
     try {
-      const response = await axios.post(
-        "https://universex-m5nn.vercel.app/api/users/sendotp",
+      const response = await api.post(
+        "/api/users/sendotp",
         {email:formData.email},
         {
-          withCredentials: true,
           headers: { "Content-Type": "application/json" },
         }
       )
       
-      console.log(response)
-      console.log(response.data)
       const res = response.data;
       
       if(res.success){
-        console.log('working')
+        localStorage.setItem("user-data",JSON.stringify(formData));
+        toast.success("OTP sent successfully");
         navigate("/otp")
       }
       else{
         toast.error("Something went wrong! Try again")
       }
     } catch (error) {
-      // if(error.response.data.message==="User is already registered"){
-      //   toast.error(error.response.data.message);
-      // }
-      // else{
-      //   console.error("signup error",error);
-      // }
-      console.error("signup error",error);
+      toast.error(error.response?.data?.message || "Unable to send OTP");
     }
     // Call API to submit form data
     //  if successful,alert successful redirect to profileEdit page
@@ -151,6 +142,11 @@ const SignUp = () => {
                   onChange={handleChange}
                   className="w-full p-2 mt-1 rounded-lg bg-white text-black border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                 />
+                {errors.lastName && (
+                  <p className="text-red-500 text-sm mt-1">
+                    {errors.lastName}
+                  </p>
+                )}
               </div>
             </div>
 

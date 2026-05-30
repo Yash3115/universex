@@ -1,42 +1,62 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import axios from "axios";
+import api from "../../services/api";
 
-const API_URL = "https://universex-m5nn.vercel.app/api/posts"; // Update this to the correct backend URL
+const POSTS_ENDPOINT = "/api/posts";
 
 // Fetch all posts
-export const fetchPosts = createAsyncThunk("posts/fetchPosts", async (_, { getState }) => {
-  const response = await axios.get(API_URL);
-  const posts = response.data.posts;
-  const { auth } = getState();
-  const userId = auth.user._id; // Ensure _id is used for MongoDB consistency
-  return { posts, userId };
-});
+export const fetchPosts = createAsyncThunk(
+  "posts/fetchPosts",
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const response = await api.get(POSTS_ENDPOINT);
+      const posts = response.data.posts || [];
+      const userId = getState().auth.user?._id || null;
+      return { posts, userId };
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
 
 // Add a new post
-export const createPost = createAsyncThunk("posts/createPost", async (postData, { getState }) => {
-  const { user } = getState().auth;
-  const response = await axios.post(API_URL, {
-    ...postData,
-    userId: user._id, // Use _id for consistency
-  });
-  return response.data;
-});
+export const createPost = createAsyncThunk(
+  "posts/createPost",
+  async (postData, { rejectWithValue }) => {
+    try {
+      const isFormData = typeof FormData !== "undefined" && postData instanceof FormData;
+      const response = await api.post(POSTS_ENDPOINT, postData, {
+        headers: isFormData ? { "Content-Type": "multipart/form-data" } : undefined,
+      });
+      return response.data.post || response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
 
 // Update a post (only if owned by the current user)
-export const updatePost = createAsyncThunk("posts/updatePost", async (postData, { getState }) => {
-  const { user } = getState().auth;
-  const response = await axios.put(`${API_URL}/${postData._id}`, postData); // Use _id
-  return response.data;
-});
+export const updatePost = createAsyncThunk(
+  "posts/updatePost",
+  async (postData, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`${POSTS_ENDPOINT}/${postData._id}`, postData);
+      return response.data.post || response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
 
 // Delete a post (only if owned by the current user)
 export const deletePost = createAsyncThunk(
   "posts/deletePost",
-  async (postId) => {
-    await axios.delete(`${API_URL}/${postId}`, {
-      withCredentials: true, // Ensure cookies are sent with the request
-    });
-    return postId;
+  async (postId, { rejectWithValue }) => {
+    try {
+      await api.delete(`${POSTS_ENDPOINT}/${postId}`);
+      return postId;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
   }
 );
 
@@ -61,11 +81,13 @@ const postsSlice = createSlice({
         state.status = "succeeded";
         state.posts = action.payload.posts;
         const userId = action.payload.userId;
-        state.userPosts = state.posts.filter((post) => post.user._id === userId);
+        state.userPosts = userId
+          ? state.posts.filter((post) => String(post.user?._id) === String(userId))
+          : [];
       })
       .addCase(fetchPosts.rejected, (state, action) => {
         state.status = "failed";
-        state.error = action.error.message;
+        state.error = action.payload || action.error.message;
       })
       .addCase(createPost.fulfilled, (state, action) => {
         state.posts.unshift(action.payload);
@@ -82,6 +104,15 @@ const postsSlice = createSlice({
       .addCase(deletePost.fulfilled, (state, action) => {
         state.posts = state.posts.filter((post) => post._id !== action.payload);
         state.userPosts = state.userPosts.filter((post) => post._id !== action.payload);
+      })
+      .addCase(createPost.rejected, (state, action) => {
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(updatePost.rejected, (state, action) => {
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(deletePost.rejected, (state, action) => {
+        state.error = action.payload || action.error.message;
       });
   },
 });
