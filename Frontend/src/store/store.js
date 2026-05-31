@@ -9,6 +9,7 @@ import discoveryReducer from "../features/discovery/discoverySlice";
 import interactionsReducer from "../features/interactions/interactionsSlice";
 import coursesReducer from "../features/courses/coursesSlice";
 import courseMaterialsReducer from "../features/courseMaterials/courseMaterialsSlice";
+import courseAnnouncementsReducer from "../features/courseAnnouncements/courseAnnouncementsSlice";
 
 
 const store = configureStore({
@@ -23,6 +24,7 @@ const store = configureStore({
     interactions: interactionsReducer,
     courses: coursesReducer,
     courseMaterials: courseMaterialsReducer,
+    courseAnnouncements: courseAnnouncementsReducer,
 
   },
 });

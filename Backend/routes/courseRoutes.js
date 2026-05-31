@@ -1,5 +1,10 @@
 const express = require("express");
 const {
+  createCourseAnnouncement,
+  deleteCourseAnnouncement,
+  getCourseAnnouncements,
+} = require("../controllers/courseAnnouncementController");
+const {
   createCourseMaterial,
   deleteCourseMaterial,
   getCourseMaterials,
@@ -28,5 +33,8 @@ router.patch("/:id/enrollments/:studentId", updateEnrollment);
 router.post("/:courseId/materials", createCourseMaterial);
 router.get("/:courseId/materials", getCourseMaterials);
 router.delete("/:courseId/materials/:materialId", deleteCourseMaterial);
+router.post("/:courseId/announcements", createCourseAnnouncement);
+router.get("/:courseId/announcements", getCourseAnnouncements);
+router.delete("/:courseId/announcements/:announcementId", deleteCourseAnnouncement);
 
 module.exports = router;

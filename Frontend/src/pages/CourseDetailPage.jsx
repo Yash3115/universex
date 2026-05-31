@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import CourseAnnouncementCard from "../components/CourseAnnouncementCard";
+import CourseAnnouncementFormModal from "../components/CourseAnnouncementFormModal";
 import CourseMaterialCard from "../components/CourseMaterialCard";
 import CourseMaterialUploadModal from "../components/CourseMaterialUploadModal";
+import { fetchCourseAnnouncements, setAnnouncementFilters } from "../features/courseAnnouncements/courseAnnouncementsSlice";
 import { fetchCourseMaterials, setMaterialFilters } from "../features/courseMaterials/courseMaterialsSlice";
 import { clearSelectedCourse, fetchCourseById, updateEnrollment } from "../features/courses/coursesSlice";
 import { getImageUrl } from "../utils/imageUtils";
@@ -12,9 +15,15 @@ const CourseDetailPage = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
   const [showMaterialUpload, setShowMaterialUpload] = useState(false);
   const { error, selectedCourse, selectedStatus, viewerContext } = useSelector((state) => state.courses);
+  const announcementState = useSelector((state) => state.courseAnnouncements);
   const materialState = useSelector((state) => state.courseMaterials);
+  const announcements = announcementState.itemsByCourseId[id] || [];
+  const announcementStatus = announcementState.statusByCourseId[id] || "idle";
+  const announcementFilters = announcementState.filtersByCourseId[id] || { search: "", priority: "" };
+  const announcementViewerContext = announcementState.viewerContextByCourseId[id] || {};
   const materials = materialState.itemsByCourseId[id] || [];
   const materialStatus = materialState.statusByCourseId[id] || "idle";
   const materialFilters = materialState.filtersByCourseId[id] || { search: "", type: "" };
@@ -28,6 +37,10 @@ const CourseDetailPage = () => {
   useEffect(() => {
     if (id) dispatch(fetchCourseMaterials({ courseId: id, filters: materialFilters }));
   }, [dispatch, id, materialFilters.search, materialFilters.type]);
+
+  useEffect(() => {
+    if (id) dispatch(fetchCourseAnnouncements({ courseId: id, filters: announcementFilters }));
+  }, [dispatch, id, announcementFilters.search, announcementFilters.priority]);
 
   const updateStudent = async (studentId, status) => {
     try {
@@ -63,6 +76,32 @@ const CourseDetailPage = () => {
 
         <section className="grid gap-6 lg:grid-cols-[1fr_22rem]">
           <main className="space-y-6">
+            <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900">Announcements</h2>
+                  <p className="text-sm text-gray-500">Official course updates, schedule changes, and urgent notices.</p>
+                </div>
+                {announcementViewerContext.isInstructor && <button className="btn btn-primary rounded-2xl" onClick={() => setShowAnnouncementForm(true)}>+ New announcement</button>}
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <input className="input input-bordered rounded-2xl" value={announcementFilters.search || ""} onChange={(e) => dispatch(setAnnouncementFilters({ courseId: id, filters: { search: e.target.value } }))} placeholder="Search announcements" />
+                <select className="select select-bordered rounded-2xl" value={announcementFilters.priority || ""} onChange={(e) => dispatch(setAnnouncementFilters({ courseId: id, filters: { priority: e.target.value } }))}>
+                  <option value="">All priorities</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="important">Important</option>
+                  <option value="normal">Normal</option>
+                </select>
+              </div>
+              {announcementStatus === "loading" && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">Loading announcements...</p>}
+              <div className="mt-5 space-y-4">
+                {announcements.map((announcement) => (
+                  <CourseAnnouncementCard key={announcement._id} courseId={id} isInstructor={announcementViewerContext.isInstructor} announcement={announcement} />
+                ))}
+              </div>
+              {announcementStatus === "succeeded" && announcements.length === 0 && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">No announcements yet.</p>}
+            </div>
+
             <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
@@ -115,7 +154,7 @@ const CourseDetailPage = () => {
               <h2 className="text-2xl font-black text-gray-900">Coming next</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl bg-blue-50 p-4 text-blue-700"><p className="font-black">Material comments</p><p className="text-sm">Discuss course resources.</p></div>
-                <div className="rounded-2xl bg-purple-50 p-4 text-purple-700"><p className="font-black">Announcements</p><p className="text-sm">Notify enrolled students.</p></div>
+                <div className="rounded-2xl bg-purple-50 p-4 text-purple-700"><p className="font-black">Announcement read receipts</p><p className="text-sm">Track who has seen updates.</p></div>
                 <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700"><p className="font-black">Assignments</p><p className="text-sm">Publish and grade work.</p></div>
               </div>
             </div>
@@ -148,6 +187,7 @@ const CourseDetailPage = () => {
         </section>
       </div>
 
+      {showAnnouncementForm && <CourseAnnouncementFormModal courseId={id} onClose={() => setShowAnnouncementForm(false)} />}
       {showMaterialUpload && <CourseMaterialUploadModal courseId={id} onClose={() => setShowMaterialUpload(false)} />}
     </div>
   );
