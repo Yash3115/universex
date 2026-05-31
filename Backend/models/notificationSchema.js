@@ -14,6 +14,7 @@ const notificationSchema = new mongoose.Schema(
         assessment: { type: mongoose.Schema.Types.ObjectId, ref: "Assessment" },
         question: { type: mongoose.Schema.Types.ObjectId, ref: "CourseQuestion" },
         answer: { type: mongoose.Schema.Types.ObjectId, ref: "CourseAnswer" },
+        attendanceSession: { type: mongoose.Schema.Types.ObjectId, ref: "CourseAttendanceSession" },
         post: { type: mongoose.Schema.Types.ObjectId, ref: "Post" },
         comment: { type: mongoose.Schema.Types.ObjectId, ref: "Comment" },
         job: { type: mongoose.Schema.Types.ObjectId, ref: "Job" },

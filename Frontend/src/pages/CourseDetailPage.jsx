@@ -6,6 +6,8 @@ import AssignmentCard from "../components/AssignmentCard";
 import AssignmentFormModal from "../components/AssignmentFormModal";
 import AssessmentCard from "../components/AssessmentCard";
 import AssessmentFormModal from "../components/AssessmentFormModal";
+import AttendanceSessionCard from "../components/AttendanceSessionCard";
+import AttendanceSessionFormModal from "../components/AttendanceSessionFormModal";
 import CourseQuestionCard from "../components/CourseQuestionCard";
 import CourseQuestionFormModal from "../components/CourseQuestionFormModal";
 import CourseAnnouncementCard from "../components/CourseAnnouncementCard";
@@ -18,23 +20,31 @@ import { clearSelectedCourse, fetchCourseById, updateEnrollment } from "../featu
 import { fetchCourseAssignments } from "../features/assignments/assignmentsSlice";
 import { fetchCourseAssessments } from "../features/results/resultsSlice";
 import { fetchCourseQuestions, setQuestionFilters } from "../features/courseQA/courseQASlice";
+import { fetchCourseAttendance } from "../features/courseAttendance/courseAttendanceSlice";
 import { getImageUrl } from "../utils/imageUtils";
 
 const CourseDetailPage = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [showAttendanceForm, setShowAttendanceForm] = useState(false);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [showAssessmentForm, setShowAssessmentForm] = useState(false);
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
   const [showMaterialUpload, setShowMaterialUpload] = useState(false);
   const { error, selectedCourse, selectedStatus, viewerContext } = useSelector((state) => state.courses);
+  const attendanceState = useSelector((state) => state.courseAttendance);
   const qaState = useSelector((state) => state.courseQA);
   const resultsState = useSelector((state) => state.results);
   const assignmentState = useSelector((state) => state.assignments);
   const announcementState = useSelector((state) => state.courseAnnouncements);
   const materialState = useSelector((state) => state.courseMaterials);
+  const attendanceSessions = attendanceState.sessionsByCourseId[id] || [];
+  const attendanceStatus = attendanceState.statusByCourseId[id] || "idle";
+  const attendanceViewerContext = attendanceState.viewerContextByCourseId[id] || {};
+  const myAttendanceStats = attendanceState.myStatsByCourseId[id] || {};
+  const myAttendanceRecords = attendanceState.myRecordsByCourseId[id] || [];
   const questions = qaState.questionsByCourseId[id] || [];
   const questionStatus = qaState.statusByCourseId[id] || "idle";
   const questionFilters = qaState.filtersByCourseId[id] || { search: "", status: "" };
@@ -78,6 +88,10 @@ const CourseDetailPage = () => {
   useEffect(() => {
     if (id) dispatch(fetchCourseQuestions({ courseId: id, filters: questionFilters }));
   }, [dispatch, id, questionFilters.search, questionFilters.status]);
+
+  useEffect(() => {
+    if (id) dispatch(fetchCourseAttendance(id));
+  }, [dispatch, id]);
 
   const updateStudent = async (studentId, status) => {
     try {
@@ -234,6 +248,36 @@ const CourseDetailPage = () => {
             </div>
 
             <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900">Official Attendance</h2>
+                  <p className="text-sm text-gray-500">Professor-marked attendance sessions and student records.</p>
+                </div>
+                {attendanceViewerContext.isInstructor && <button className="btn btn-primary rounded-2xl" onClick={() => setShowAttendanceForm(true)}>+ Create session</button>}
+              </div>
+              {!attendanceViewerContext.isInstructor && (
+                <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700"><p className="text-2xl font-black">{myAttendanceStats.percentage || 0}%</p><p className="text-sm font-bold">Attendance</p></div>
+                  <div className="rounded-2xl bg-blue-50 p-4 text-blue-700"><p className="text-2xl font-black">{myAttendanceStats.present || 0}</p><p className="text-sm font-bold">Present/Late</p></div>
+                  <div className="rounded-2xl bg-slate-50 p-4 text-slate-700"><p className="text-2xl font-black">{myAttendanceStats.total || 0}</p><p className="text-sm font-bold">Counted sessions</p></div>
+                </div>
+              )}
+              {attendanceStatus === "loading" && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">Loading attendance...</p>}
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {attendanceSessions.map((session) => <AttendanceSessionCard key={session._id} course={selectedCourse} isInstructor={attendanceViewerContext.isInstructor} session={session} />)}
+              </div>
+              {!attendanceViewerContext.isInstructor && myAttendanceRecords.length > 0 && (
+                <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+                  <h3 className="font-black text-gray-900">My records</h3>
+                  <div className="mt-3 space-y-2">
+                    {myAttendanceRecords.slice(0, 5).map((record) => <p key={record._id} className="text-sm text-gray-600">{record.session?.title || "Session"}: <span className="font-bold capitalize">{record.status}</span></p>)}
+                  </div>
+                </div>
+              )}
+              {attendanceStatus === "succeeded" && attendanceSessions.length === 0 && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">No official attendance sessions yet.</p>}
+            </div>
+
+            <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
               <h2 className="text-2xl font-black text-gray-900">Roster</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {enrolled.map((item) => (
@@ -252,7 +296,7 @@ const CourseDetailPage = () => {
             <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
               <h2 className="text-2xl font-black text-gray-900">Coming next</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl bg-blue-50 p-4 text-blue-700"><p className="font-black">Material comments</p><p className="text-sm">Discuss course resources.</p></div>
+                <div className="rounded-2xl bg-blue-50 p-4 text-blue-700"><p className="font-black">Office hours</p><p className="text-sm">Book professor meeting slots.</p></div>
                 <div className="rounded-2xl bg-purple-50 p-4 text-purple-700"><p className="font-black">Announcement read receipts</p><p className="text-sm">Track who has seen updates.</p></div>
                 <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700"><p className="font-black">Result analytics</p><p className="text-sm">Charts, averages, and exports.</p></div>
               </div>
@@ -286,6 +330,7 @@ const CourseDetailPage = () => {
         </section>
       </div>
 
+      {showAttendanceForm && <AttendanceSessionFormModal courseId={id} onClose={() => setShowAttendanceForm(false)} />}
       {showQuestionForm && <CourseQuestionFormModal courseId={id} onClose={() => setShowQuestionForm(false)} />}
       {showAssessmentForm && <AssessmentFormModal courseId={id} onClose={() => setShowAssessmentForm(false)} />}
       {showAssignmentForm && <AssignmentFormModal courseId={id} onClose={() => setShowAssignmentForm(false)} />}
