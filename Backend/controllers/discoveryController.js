@@ -31,6 +31,87 @@ const buildConnectionState = (connection, currentUserId) => {
   };
 };
 
+const CONNECTION_USER_SELECT = "firstName lastName email image college additionalDetails active";
+
+const connectionPopulateOptions = [
+  {
+    path: "requester",
+    select: CONNECTION_USER_SELECT,
+    populate: { path: "additionalDetails" },
+  },
+  {
+    path: "recipient",
+    select: CONNECTION_USER_SELECT,
+    populate: { path: "additionalDetails" },
+  },
+];
+
+const getOtherStudent = (connection, currentUserId) => {
+  const requesterId = String(connection.requester?._id || connection.requester);
+  return requesterId === String(currentUserId) ? connection.recipient : connection.requester;
+};
+
+const serializeConnection = (connection, currentUserId) => {
+  const student = getOtherStudent(connection, currentUserId);
+  const state = buildConnectionState(connection, currentUserId);
+
+  return {
+    _id: connection._id,
+    status: connection.status,
+    direction: state.direction,
+    connectionState: state,
+    connectedAt: connection.status === "accepted" ? connection.updatedAt : null,
+    createdAt: connection.createdAt,
+    updatedAt: connection.updatedAt,
+    student: student?.toObject ? student.toObject() : student,
+  };
+};
+
+const normalizeText = (value) => String(value || "").trim().toLowerCase();
+
+const matchesConnectionFilters = (entry, filters) => {
+  const student = entry.student || {};
+  const details = student.additionalDetails || {};
+  const search = normalizeText(filters.search);
+  const department = normalizeText(filters.department);
+  const college = normalizeText(filters.college);
+  const graduationYear = normalizeText(filters.graduationYear);
+
+  if (student.active === false) return false;
+  if (department && normalizeText(details.department) !== department) return false;
+  if (college && normalizeText(student.college) !== college) return false;
+  if (graduationYear && normalizeText(details.graduationYear) !== graduationYear) return false;
+
+  if (!search) return true;
+
+  const searchableValues = [
+    student.firstName,
+    student.lastName,
+    student.email,
+    student.college,
+    details.about,
+    details.department,
+    details.graduationYear,
+    ...(Array.isArray(details.skills) ? details.skills : []),
+    ...(Array.isArray(details.interests) ? details.interests : []),
+  ];
+
+  return searchableValues.some((value) => normalizeText(value).includes(search));
+};
+
+const summarizeCounts = (entries, getKey) => {
+  const counts = new Map();
+  entries.forEach((entry) => {
+    const key = getKey(entry);
+    if (!key) return;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+
+  return Array.from(counts.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((first, second) => second.count - first.count || String(first.name).localeCompare(String(second.name)));
+};
+
 exports.searchStudents = async (req, res) => {
   try {
     const { search = "", department, college, graduationYear, page = 1, limit = 24 } = req.query;
@@ -224,5 +305,113 @@ exports.respondToConnection = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to update connection", error: error.message });
+  }
+};
+
+exports.getMyConnections = async (req, res) => {
+  try {
+    const {
+      status = "accepted",
+      direction = "connected",
+      search = "",
+      department = "",
+      college = "",
+      graduationYear = "",
+    } = req.query;
+
+    const query = {};
+    const normalizedStatus = String(status).toLowerCase();
+    if (["pending", "accepted", "rejected"].includes(normalizedStatus)) {
+      query.status = normalizedStatus;
+    }
+
+    if (direction === "incoming") {
+      query.recipient = req.user.id;
+    } else if (direction === "outgoing") {
+      query.requester = req.user.id;
+    } else {
+      query.$or = [{ requester: req.user.id }, { recipient: req.user.id }];
+    }
+
+    const connections = await Connection.find(query)
+      .populate(connectionPopulateOptions)
+      .sort({ updatedAt: -1 });
+
+    const filteredConnections = connections
+      .map((connection) => serializeConnection(connection, req.user.id))
+      .filter((entry) =>
+        matchesConnectionFilters(entry, {
+          search,
+          department,
+          college,
+          graduationYear,
+        })
+      );
+
+    res.status(200).json({
+      success: true,
+      connections: filteredConnections,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch connections", error: error.message });
+  }
+};
+
+exports.getConnectionSummary = async (req, res) => {
+  try {
+    const [acceptedConnections, incomingPending, outgoingPending] = await Promise.all([
+      Connection.find({
+        status: "accepted",
+        $or: [{ requester: req.user.id }, { recipient: req.user.id }],
+      })
+        .populate(connectionPopulateOptions)
+        .sort({ updatedAt: -1 }),
+      Connection.countDocuments({ recipient: req.user.id, status: "pending" }),
+      Connection.countDocuments({ requester: req.user.id, status: "pending" }),
+    ]);
+
+    const acceptedEntries = acceptedConnections
+      .map((connection) => serializeConnection(connection, req.user.id))
+      .filter((entry) => entry.student?.active !== false);
+
+    res.status(200).json({
+      success: true,
+      summary: {
+        accepted: acceptedEntries.length,
+        incomingPending,
+        outgoingPending,
+        byDepartment: summarizeCounts(acceptedEntries, (entry) => entry.student?.additionalDetails?.department),
+        byGraduationYear: summarizeCounts(acceptedEntries, (entry) => entry.student?.additionalDetails?.graduationYear),
+        recentConnections: acceptedEntries.slice(0, 5),
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch connection summary", error: error.message });
+  }
+};
+
+exports.removeConnection = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Valid connection id is required" });
+    }
+
+    const connection = await Connection.findOneAndDelete({
+      _id: id,
+      $or: [{ requester: req.user.id }, { recipient: req.user.id }],
+    });
+
+    if (!connection) {
+      return res.status(404).json({ success: false, message: "Connection not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: connection.status === "accepted" ? "Connection removed" : "Connection request removed",
+      connectionId: connection._id,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to remove connection", error: error.message });
   }
 };

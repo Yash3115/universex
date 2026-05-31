@@ -56,6 +56,45 @@ export const respondToConnection = createAsyncThunk(
   }
 );
 
+export const fetchConnections = createAsyncThunk(
+  "discovery/fetchConnections",
+  async (filters, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/api/discovery/connections${buildQuery(filters)}`);
+      return response.data.connections || [];
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+export const fetchConnectionSummary = createAsyncThunk(
+  "discovery/fetchConnectionSummary",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.get("/api/discovery/connections/summary");
+      return response.data.summary || {};
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+export const removeConnection = createAsyncThunk(
+  "discovery/removeConnection",
+  async (connectionId, { rejectWithValue }) => {
+    try {
+      const response = await api.delete(`/api/discovery/connections/${connectionId}`);
+      return {
+        connectionId,
+        message: response.data.message,
+      };
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
 const defaultConnection = { id: null, status: "none", direction: "none" };
 
 const getStudentConnectionState = (student) =>
@@ -77,15 +116,31 @@ const discoverySlice = createSlice({
   name: "discovery",
   initialState: {
     students: [],
+    connections: [],
+    connectionsStatus: "idle",
+    connectionsError: null,
+    connectionSummary: {
+      accepted: 0,
+      incomingPending: 0,
+      outgoingPending: 0,
+      byDepartment: [],
+      byGraduationYear: [],
+      recentConnections: [],
+    },
+    summaryStatus: "idle",
     status: "idle",
     error: null,
     actionLoadingByStudentId: {},
     actionLoadingByConnectionId: {},
     filters: { search: "", department: "", college: "", graduationYear: "" },
+    connectionFilters: { status: "accepted", direction: "connected", search: "", department: "", college: "", graduationYear: "" },
   },
   reducers: {
     setDiscoveryFilters: (state, action) => {
       state.filters = { ...state.filters, ...action.payload };
+    },
+    setConnectionFilters: (state, action) => {
+      state.connectionFilters = { ...state.connectionFilters, ...action.payload };
     },
   },
   extraReducers: (builder) => {
@@ -134,14 +189,60 @@ const discoverySlice = createSlice({
             ? applyConnectionState(student, connectionState)
             : student;
         });
+        state.connectionsStatus = "idle";
+        state.summaryStatus = "idle";
       })
       .addCase(respondToConnection.rejected, (state, action) => {
         const { connectionId, studentId } = action.meta.arg || {};
         if (studentId) delete state.actionLoadingByStudentId[studentId];
         if (connectionId) delete state.actionLoadingByConnectionId[connectionId];
+      })
+      .addCase(fetchConnections.pending, (state) => {
+        state.connectionsStatus = "loading";
+        state.connectionsError = null;
+      })
+      .addCase(fetchConnections.fulfilled, (state, action) => {
+        state.connectionsStatus = "succeeded";
+        state.connections = action.payload;
+      })
+      .addCase(fetchConnections.rejected, (state, action) => {
+        state.connectionsStatus = "failed";
+        state.connectionsError = action.payload || action.error.message;
+      })
+      .addCase(fetchConnectionSummary.pending, (state) => {
+        state.summaryStatus = "loading";
+      })
+      .addCase(fetchConnectionSummary.fulfilled, (state, action) => {
+        state.summaryStatus = "succeeded";
+        state.connectionSummary = {
+          ...state.connectionSummary,
+          ...action.payload,
+        };
+      })
+      .addCase(fetchConnectionSummary.rejected, (state) => {
+        state.summaryStatus = "failed";
+      })
+      .addCase(removeConnection.pending, (state, action) => {
+        state.actionLoadingByConnectionId[action.meta.arg] = true;
+      })
+      .addCase(removeConnection.fulfilled, (state, action) => {
+        delete state.actionLoadingByConnectionId[action.payload.connectionId];
+        state.connections = state.connections.filter(
+          (connection) => String(connection._id) !== String(action.payload.connectionId)
+        );
+        state.students = state.students.map((student) => {
+          const connectionId = student.connection?.id || student.connection?._id;
+          return String(connectionId) === String(action.payload.connectionId)
+            ? applyConnectionState(student, defaultConnection)
+            : student;
+        });
+        state.summaryStatus = "idle";
+      })
+      .addCase(removeConnection.rejected, (state, action) => {
+        delete state.actionLoadingByConnectionId[action.meta.arg];
       });
   },
 });
 
-export const { setDiscoveryFilters } = discoverySlice.actions;
+export const { setConnectionFilters, setDiscoveryFilters } = discoverySlice.actions;
 export default discoverySlice.reducer;

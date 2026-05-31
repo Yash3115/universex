@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   requestConnection,
@@ -14,6 +15,7 @@ const getConnectionState = (student) =>
 
 const StudentDirectory = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { actionLoadingByStudentId, students, status, error, filters } = useSelector((state) => state.discovery);
 
   useEffect(() => {
@@ -78,7 +80,12 @@ const StudentDirectory = () => {
     }
 
     if (connection.direction === "connected") {
-      return <div className="mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-center font-bold text-emerald-700">Connected</div>;
+      return (
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-center font-bold text-emerald-700">Connected</div>
+          <button className="btn rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100" onClick={() => navigate("/connections")}>Manage</button>
+        </div>
+      );
     }
 
     if (connection.direction === "outgoing" && connection.status === "pending") {
@@ -103,6 +110,7 @@ const StudentDirectory = () => {
           <p className="text-sm font-bold uppercase tracking-wide text-purple-100">Student discovery</p>
           <h1 className="mt-2 text-3xl font-black sm:text-5xl">Find students across campus</h1>
           <p className="mt-3 max-w-2xl text-purple-100">Search peers by college, department, year, and profile information.</p>
+          <button className="btn mt-5 rounded-2xl border-none bg-white text-purple-700 hover:bg-purple-50" onClick={() => navigate("/connections")}>View your connections</button>
         </section>
 
         <section className="grid grid-cols-1 gap-3 rounded-3xl bg-white p-4 shadow-xl md:grid-cols-4">
