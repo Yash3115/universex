@@ -6,6 +6,8 @@ const notificationSchema = new mongoose.Schema(
         sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
         connection: { type: mongoose.Schema.Types.ObjectId, ref: "Connection" },
         interaction: { type: mongoose.Schema.Types.ObjectId, ref: "ConnectionInteraction" },
+        course: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
+        material: { type: mongoose.Schema.Types.ObjectId, ref: "CourseMaterial" },
         post: { type: mongoose.Schema.Types.ObjectId, ref: "Post" },
         comment: { type: mongoose.Schema.Types.ObjectId, ref: "Comment" },
         job: { type: mongoose.Schema.Types.ObjectId, ref: "Job" },

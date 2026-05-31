@@ -8,6 +8,7 @@ import budgetReducer from "../features/budget/budgetSlice";
 import discoveryReducer from "../features/discovery/discoverySlice";
 import interactionsReducer from "../features/interactions/interactionsSlice";
 import coursesReducer from "../features/courses/coursesSlice";
+import courseMaterialsReducer from "../features/courseMaterials/courseMaterialsSlice";
 
 
 const store = configureStore({
@@ -21,6 +22,7 @@ const store = configureStore({
     discovery: discoveryReducer,
     interactions: interactionsReducer,
     courses: coursesReducer,
+    courseMaterials: courseMaterialsReducer,
 
   },
 });

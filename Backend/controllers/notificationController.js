@@ -7,6 +7,8 @@ exports.getNotifications = async (req, res) => {
             .populate("sender", "firstName lastName image")
             .populate("connection", "requester recipient status")
             .populate("interaction", "type title status")
+            .populate("course", "title code")
+            .populate("material", "title type")
             .populate("post", "content")
             .populate("job", "title companyName")
             .sort({ createdAt: -1 })
