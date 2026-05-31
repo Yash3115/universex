@@ -144,6 +144,46 @@ const summarizeCounts = (entries, getKey) => {
     .sort((first, second) => second.count - first.count || String(first.name).localeCompare(String(second.name)));
 };
 
+const getArrayValues = (value) => (Array.isArray(value) ? value.filter(Boolean).map((item) => String(item).trim()).filter(Boolean) : []);
+
+const getSharedValues = (firstValues = [], secondValues = []) => {
+  const firstValueMap = new Map(getArrayValues(firstValues).map((value) => [normalizeText(value), value]));
+  return getArrayValues(secondValues).filter((value) => firstValueMap.has(normalizeText(value)));
+};
+
+const buildStudentProfileResponse = ({ student, canViewExtendedProfile, canViewContact }) => {
+  const rawStudent = student.toObject ? student.toObject() : student;
+  const details = rawStudent.additionalDetails || {};
+  const publicDetails = {
+    visibility: details.visibility || "public",
+    department: details.department || "",
+    graduationYear: details.graduationYear || "",
+  };
+
+  if (canViewExtendedProfile) {
+    publicDetails.about = details.about || "";
+    publicDetails.skills = details.skills || [];
+    publicDetails.interests = details.interests || [];
+  }
+
+  if (canViewContact) {
+    publicDetails.contactNumber = details.contactNumber || "";
+    publicDetails.insta = details.insta || "";
+    publicDetails.linkedin = details.linkedin || "";
+  }
+
+  return {
+    _id: rawStudent._id,
+    firstName: rawStudent.firstName,
+    lastName: rawStudent.lastName,
+    email: canViewContact ? rawStudent.email : undefined,
+    image: rawStudent.image,
+    college: rawStudent.college,
+    additionalDetails: publicDetails,
+    createdAt: rawStudent.createdAt,
+  };
+};
+
 exports.searchStudents = async (req, res) => {
   try {
     const { search = "", department, college, graduationYear, page = 1, limit = 24 } = req.query;
@@ -199,6 +239,83 @@ exports.searchStudents = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to search students", error: error.message });
+  }
+};
+
+exports.getStudentProfile = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Valid student id is required" });
+    }
+
+    const isSelf = String(id) === String(req.user.id);
+    const [student, viewer] = await Promise.all([
+      User.findById(id)
+        .select("firstName lastName email image college additionalDetails active createdAt")
+        .populate("additionalDetails"),
+      User.findById(req.user.id).select("college additionalDetails").populate("additionalDetails"),
+    ]);
+
+    if (!student || (student.active === false && !isSelf)) {
+      return res.status(404).json({ success: false, message: "Student not found" });
+    }
+
+    const pairKey = buildPairKey(req.user.id, id);
+    const connection = isSelf
+      ? null
+      : await Connection.findOne({
+          $or: [
+            { pairKey },
+            { requester: req.user.id, recipient: id },
+            { requester: id, recipient: req.user.id },
+          ],
+        });
+
+    const connectionState = isSelf
+      ? { id: null, status: "self", direction: "self" }
+      : buildConnectionState(connection, req.user.id);
+
+    const viewerDetails = viewer?.additionalDetails || {};
+    const studentDetails = student.additionalDetails || {};
+    const isConnected = connection?.status === "accepted";
+    const sameCollege = normalizeText(viewer?.college) === normalizeText(student.college);
+    const visibility = studentDetails.visibility || "public";
+    const canViewExtendedProfile =
+      isSelf || isConnected || visibility === "public" || (visibility === "college" && sameCollege);
+    const canViewContact = isSelf || isConnected;
+
+    const limitationReason = canViewExtendedProfile
+      ? ""
+      : visibility === "private"
+        ? "This student keeps their profile private. Connect to request access."
+        : "This profile is visible to college network or accepted connections only.";
+
+    const mutualContext = {
+      sameCollege,
+      sameDepartment: Boolean(studentDetails.department && viewerDetails.department && normalizeText(studentDetails.department) === normalizeText(viewerDetails.department)),
+      sameGraduationYear: Boolean(studentDetails.graduationYear && viewerDetails.graduationYear && String(studentDetails.graduationYear) === String(viewerDetails.graduationYear)),
+      sharedSkills: getSharedValues(viewerDetails.skills, studentDetails.skills),
+      sharedInterests: getSharedValues(viewerDetails.interests, studentDetails.interests),
+    };
+
+    res.status(200).json({
+      success: true,
+      student: buildStudentProfileResponse({ student, canViewExtendedProfile, canViewContact }),
+      connection: connection ? serializeConnection(connection, req.user.id) : null,
+      connectionState,
+      viewerAccess: {
+        isSelf,
+        isConnected,
+        canViewExtendedProfile,
+        canViewContact,
+        canViewSocials: canViewContact,
+        limitationReason,
+      },
+      mutualContext,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to fetch student profile", error: error.message });
   }
 };
 

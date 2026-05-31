@@ -107,6 +107,18 @@ export const updateConnectionPreferences = createAsyncThunk(
   }
 );
 
+export const fetchStudentProfile = createAsyncThunk(
+  "discovery/fetchStudentProfile",
+  async (studentId, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`/api/discovery/students/${studentId}`);
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
 const defaultConnection = { id: null, status: "none", direction: "none" };
 
 const getStudentConnectionState = (student) =>
@@ -129,6 +141,9 @@ const discoverySlice = createSlice({
   initialState: {
     students: [],
     connections: [],
+    selectedStudentProfile: null,
+    selectedStudentProfileStatus: "idle",
+    selectedStudentProfileError: null,
     connectionsStatus: "idle",
     connectionsError: null,
     connectionSummary: {
@@ -153,6 +168,11 @@ const discoverySlice = createSlice({
     },
     setConnectionFilters: (state, action) => {
       state.connectionFilters = { ...state.connectionFilters, ...action.payload };
+    },
+    clearSelectedStudentProfile: (state) => {
+      state.selectedStudentProfile = null;
+      state.selectedStudentProfileStatus = "idle";
+      state.selectedStudentProfileError = null;
     },
   },
   extraReducers: (builder) => {
@@ -270,9 +290,21 @@ const discoverySlice = createSlice({
       })
       .addCase(updateConnectionPreferences.rejected, (state, action) => {
         delete state.actionLoadingByConnectionId[action.meta.arg?.connectionId];
+      })
+      .addCase(fetchStudentProfile.pending, (state) => {
+        state.selectedStudentProfileStatus = "loading";
+        state.selectedStudentProfileError = null;
+      })
+      .addCase(fetchStudentProfile.fulfilled, (state, action) => {
+        state.selectedStudentProfileStatus = "succeeded";
+        state.selectedStudentProfile = action.payload;
+      })
+      .addCase(fetchStudentProfile.rejected, (state, action) => {
+        state.selectedStudentProfileStatus = "failed";
+        state.selectedStudentProfileError = action.payload || action.error.message;
       });
   },
 });
 
-export const { setConnectionFilters, setDiscoveryFilters } = discoverySlice.actions;
+export const { clearSelectedStudentProfile, setConnectionFilters, setDiscoveryFilters } = discoverySlice.actions;
 export default discoverySlice.reducer;

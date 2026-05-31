@@ -83,7 +83,7 @@ const StudentDirectory = () => {
       return (
         <div className="mt-5 grid grid-cols-2 gap-2">
           <div className="rounded-2xl bg-emerald-50 px-4 py-3 text-center font-bold text-emerald-700">Connected</div>
-          <button className="btn rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100" onClick={() => navigate("/connections")}>Manage</button>
+          <button className="btn rounded-2xl bg-blue-50 text-blue-700 hover:bg-blue-100" onClick={() => navigate(`/students/${student._id}`)}>View profile</button>
         </div>
       );
     }
@@ -129,7 +129,7 @@ const StudentDirectory = () => {
               <div className="flex items-center gap-4">
                 <img src={getImageUrl(student.image, "https://cdn-icons-png.flaticon.com/512/6596/6596121.png")} alt="Student" className="h-16 w-16 rounded-full object-cover" />
                 <div>
-                  <h2 className="text-lg font-black text-gray-900">{student.firstName} {student.lastName}</h2>
+                  <button className="text-left text-lg font-black text-gray-900 hover:text-blue-700" onClick={() => navigate(`/students/${student._id}`)}>{student.firstName} {student.lastName}</button>
                   <p className="text-sm text-gray-500">{student.college}</p>
                 </div>
               </div>

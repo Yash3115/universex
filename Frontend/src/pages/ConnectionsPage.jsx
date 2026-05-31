@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   fetchConnections,
@@ -34,6 +35,7 @@ const labelOptions = ["", "Classmate", "Friend", "Project teammate", "Senior", "
 
 const ConnectionsPage = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [editingNotesByConnectionId, setEditingNotesByConnectionId] = useState({});
   const [pendingRemoval, setPendingRemoval] = useState(null);
   const {
@@ -199,7 +201,7 @@ const ConnectionsPage = () => {
                     <div className="flex items-center gap-4">
                       <img src={getImageUrl(student.image, "https://cdn-icons-png.flaticon.com/512/6596/6596121.png")} alt={`${student.firstName || "Student"} avatar`} className="h-16 w-16 rounded-full object-cover" />
                       <div className="min-w-0">
-                        <h2 className="truncate text-lg font-black text-gray-900">{student.firstName} {student.lastName}</h2>
+                        <button className="truncate text-left text-lg font-black text-gray-900 hover:text-blue-700" onClick={() => navigate(`/students/${student._id}`)}>{student.firstName} {student.lastName}</button>
                         <p className="truncate text-sm text-gray-500">{student.college || "College not added"}</p>
                       </div>
                       {connection.status === "accepted" && (
@@ -275,7 +277,7 @@ const ConnectionsPage = () => {
                       </div>
                     ) : (
                       <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button className="btn rounded-2xl" disabled>Message soon</button>
+                        <button className="btn rounded-2xl" onClick={() => navigate(`/students/${student._id}`)}>View profile</button>
                         <button className="btn rounded-2xl border-red-100 bg-red-50 text-red-600 hover:bg-red-100" disabled={isLoading} onClick={() => setPendingRemoval(connection)}>{isLoading ? "Removing..." : connection.status === "accepted" ? "Remove" : "Cancel"}</button>
                       </div>
                     )}

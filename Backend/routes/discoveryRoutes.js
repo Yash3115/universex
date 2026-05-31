@@ -2,6 +2,7 @@ const express = require("express");
 const {
   getConnectionSummary,
   getMyConnections,
+  getStudentProfile,
   removeConnection,
   requestConnection,
   respondToConnection,
@@ -14,6 +15,7 @@ const router = express.Router();
 
 router.use(authMiddleware);
 router.get("/students", searchStudents);
+router.get("/students/:id", getStudentProfile);
 router.get("/connections", getMyConnections);
 router.get("/connections/summary", getConnectionSummary);
 router.post("/connections", requestConnection);
