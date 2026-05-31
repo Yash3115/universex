@@ -23,6 +23,7 @@ const AcademicPlannerPage = lazy(() => import("./pages/AcademicPlannerPage"));
 const StudentDirectory = lazy(() => import("./pages/StudentDirectory"));
 const ConnectionsPage = lazy(() => import("./pages/ConnectionsPage"));
 const StudentProfilePage = lazy(() => import("./pages/StudentProfilePage"));
+const InteractionsPage = lazy(() => import("./pages/InteractionsPage"));
 
 const PageLoader = () => (
   <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
@@ -173,6 +174,14 @@ const App = () => {
             element={
               <AuthenticatedRoutes>
                 <ConnectionsPage />
+              </AuthenticatedRoutes>
+            }
+          />
+          <Route
+            path="/interactions"
+            element={
+              <AuthenticatedRoutes>
+                <InteractionsPage />
               </AuthenticatedRoutes>
             }
           />

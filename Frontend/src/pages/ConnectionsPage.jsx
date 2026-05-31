@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import InteractionFormModal from "../components/InteractionFormModal";
 import {
   fetchConnections,
   fetchConnectionSummary,
@@ -37,6 +38,7 @@ const ConnectionsPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [editingNotesByConnectionId, setEditingNotesByConnectionId] = useState({});
+  const [interactionRecipient, setInteractionRecipient] = useState(null);
   const [pendingRemoval, setPendingRemoval] = useState(null);
   const {
     actionLoadingByConnectionId,
@@ -136,6 +138,7 @@ const ConnectionsPage = () => {
               <p className="mt-3 max-w-2xl text-cyan-50">
                 Manage the people you know, respond to requests, and discover patterns across your student network.
               </p>
+              <button className="btn mt-5 rounded-2xl border-none bg-white text-blue-700 hover:bg-blue-50" onClick={() => navigate("/interactions")}>Open interaction center</button>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {statCards.map((stat) => (
@@ -266,6 +269,12 @@ const ConnectionsPage = () => {
                       </div>
                     )}
 
+                    {connection.status === "accepted" && (
+                      <button className="btn btn-primary mt-4 w-full rounded-2xl" onClick={() => setInteractionRecipient(student)}>
+                        Start interaction
+                      </button>
+                    )}
+
                     <p className="mt-4 text-xs font-semibold text-gray-400">
                       {connection.status === "accepted" ? `Connected ${formatDate(connection.connectedAt)}` : `Requested ${formatDate(connection.createdAt)}`}
                     </p>
@@ -339,6 +348,10 @@ const ConnectionsPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {interactionRecipient && (
+        <InteractionFormModal recipient={interactionRecipient} onClose={() => setInteractionRecipient(null)} />
       )}
     </div>
   );

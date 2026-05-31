@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import InteractionFormModal from "../components/InteractionFormModal";
 import {
   clearSelectedStudentProfile,
   fetchStudentProfile,
@@ -25,6 +26,7 @@ const StudentProfilePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [interactionType, setInteractionType] = useState(null);
   const { selectedStudentProfile, selectedStudentProfileError, selectedStudentProfileStatus, actionLoadingByStudentId } = useSelector((state) => state.discovery);
 
   useEffect(() => {
@@ -153,6 +155,17 @@ const StudentProfilePage = () => {
           </main>
 
           <aside className="space-y-6">
+            {access.isConnected && (
+              <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
+                <h2 className="text-xl font-black text-gray-900">Start interaction</h2>
+                <p className="mt-2 text-sm text-gray-500">Use your connection to study, collaborate, or ask for guidance.</p>
+                <div className="mt-4 grid gap-2">
+                  <button className="btn btn-primary rounded-2xl" onClick={() => setInteractionType("StudyInvite")}>Invite to study</button>
+                  <button className="btn rounded-2xl" onClick={() => setInteractionType("ProjectInvite")}>Invite to project</button>
+                  <button className="btn rounded-2xl" onClick={() => setInteractionType("HelpRequest")}>Ask for help</button>
+                </div>
+              </div>
+            )}
             <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
               <h2 className="text-xl font-black text-gray-900">Mutual context</h2>
               <div className="mt-4 space-y-3 text-sm">
@@ -172,6 +185,10 @@ const StudentProfilePage = () => {
           </aside>
         </section>
       </div>
+
+      {interactionType && (
+        <InteractionFormModal defaultType={interactionType} recipient={student} onClose={() => setInteractionType(null)} />
+      )}
     </div>
   );
 };

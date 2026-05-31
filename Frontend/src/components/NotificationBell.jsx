@@ -11,6 +11,7 @@ import {
 
 const getNotificationTarget = (notification) => {
   if (notification.type === "Connection") return "/students";
+  if (notification.type === "Interaction") return "/interactions";
   if (notification.job?._id) return "/jobs";
   if (notification.post?._id) return "/community";
   return "/dashboard";
