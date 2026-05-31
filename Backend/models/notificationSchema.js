@@ -9,6 +9,8 @@ const notificationSchema = new mongoose.Schema(
         course: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
         material: { type: mongoose.Schema.Types.ObjectId, ref: "CourseMaterial" },
         announcement: { type: mongoose.Schema.Types.ObjectId, ref: "CourseAnnouncement" },
+        assignment: { type: mongoose.Schema.Types.ObjectId, ref: "Assignment" },
+        submission: { type: mongoose.Schema.Types.ObjectId, ref: "AssignmentSubmission" },
         post: { type: mongoose.Schema.Types.ObjectId, ref: "Post" },
         comment: { type: mongoose.Schema.Types.ObjectId, ref: "Comment" },
         job: { type: mongoose.Schema.Types.ObjectId, ref: "Job" },

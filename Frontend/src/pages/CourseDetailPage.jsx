@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import AssignmentCard from "../components/AssignmentCard";
+import AssignmentFormModal from "../components/AssignmentFormModal";
 import CourseAnnouncementCard from "../components/CourseAnnouncementCard";
 import CourseAnnouncementFormModal from "../components/CourseAnnouncementFormModal";
 import CourseMaterialCard from "../components/CourseMaterialCard";
@@ -9,17 +11,23 @@ import CourseMaterialUploadModal from "../components/CourseMaterialUploadModal";
 import { fetchCourseAnnouncements, setAnnouncementFilters } from "../features/courseAnnouncements/courseAnnouncementsSlice";
 import { fetchCourseMaterials, setMaterialFilters } from "../features/courseMaterials/courseMaterialsSlice";
 import { clearSelectedCourse, fetchCourseById, updateEnrollment } from "../features/courses/coursesSlice";
+import { fetchCourseAssignments } from "../features/assignments/assignmentsSlice";
 import { getImageUrl } from "../utils/imageUtils";
 
 const CourseDetailPage = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [showAssignmentForm, setShowAssignmentForm] = useState(false);
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
   const [showMaterialUpload, setShowMaterialUpload] = useState(false);
   const { error, selectedCourse, selectedStatus, viewerContext } = useSelector((state) => state.courses);
+  const assignmentState = useSelector((state) => state.assignments);
   const announcementState = useSelector((state) => state.courseAnnouncements);
   const materialState = useSelector((state) => state.courseMaterials);
+  const assignments = assignmentState.assignmentsByCourseId[id] || [];
+  const assignmentStatus = assignmentState.statusByCourseId[id] || "idle";
+  const assignmentViewerContext = assignmentState.viewerContextByCourseId[id] || {};
   const announcements = announcementState.itemsByCourseId[id] || [];
   const announcementStatus = announcementState.statusByCourseId[id] || "idle";
   const announcementFilters = announcementState.filtersByCourseId[id] || { search: "", priority: "" };
@@ -41,6 +49,10 @@ const CourseDetailPage = () => {
   useEffect(() => {
     if (id) dispatch(fetchCourseAnnouncements({ courseId: id, filters: announcementFilters }));
   }, [dispatch, id, announcementFilters.search, announcementFilters.priority]);
+
+  useEffect(() => {
+    if (id) dispatch(fetchCourseAssignments(id));
+  }, [dispatch, id]);
 
   const updateStudent = async (studentId, status) => {
     try {
@@ -135,6 +147,23 @@ const CourseDetailPage = () => {
             </div>
 
             <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900">Assignments</h2>
+                  <p className="text-sm text-gray-500">Coursework, submissions, grading, and professor feedback.</p>
+                </div>
+                {assignmentViewerContext.isInstructor && <button className="btn btn-primary rounded-2xl" onClick={() => setShowAssignmentForm(true)}>+ Create assignment</button>}
+              </div>
+              {assignmentStatus === "loading" && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">Loading assignments...</p>}
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {assignments.map((assignment) => (
+                  <AssignmentCard key={assignment._id} assignment={assignment} courseId={id} isInstructor={assignmentViewerContext.isInstructor} />
+                ))}
+              </div>
+              {assignmentStatus === "succeeded" && assignments.length === 0 && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">No assignments published yet.</p>}
+            </div>
+
+            <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
               <h2 className="text-2xl font-black text-gray-900">Roster</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {enrolled.map((item) => (
@@ -155,7 +184,7 @@ const CourseDetailPage = () => {
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl bg-blue-50 p-4 text-blue-700"><p className="font-black">Material comments</p><p className="text-sm">Discuss course resources.</p></div>
                 <div className="rounded-2xl bg-purple-50 p-4 text-purple-700"><p className="font-black">Announcement read receipts</p><p className="text-sm">Track who has seen updates.</p></div>
-                <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700"><p className="font-black">Assignments</p><p className="text-sm">Publish and grade work.</p></div>
+                <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700"><p className="font-black">Results</p><p className="text-sm">Publish secure gradebooks.</p></div>
               </div>
             </div>
           </main>
@@ -187,6 +216,7 @@ const CourseDetailPage = () => {
         </section>
       </div>
 
+      {showAssignmentForm && <AssignmentFormModal courseId={id} onClose={() => setShowAssignmentForm(false)} />}
       {showAnnouncementForm && <CourseAnnouncementFormModal courseId={id} onClose={() => setShowAnnouncementForm(false)} />}
       {showMaterialUpload && <CourseMaterialUploadModal courseId={id} onClose={() => setShowMaterialUpload(false)} />}
     </div>

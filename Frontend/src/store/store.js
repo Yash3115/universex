@@ -10,6 +10,7 @@ import interactionsReducer from "../features/interactions/interactionsSlice";
 import coursesReducer from "../features/courses/coursesSlice";
 import courseMaterialsReducer from "../features/courseMaterials/courseMaterialsSlice";
 import courseAnnouncementsReducer from "../features/courseAnnouncements/courseAnnouncementsSlice";
+import assignmentsReducer from "../features/assignments/assignmentsSlice";
 
 
 const store = configureStore({
@@ -25,6 +26,7 @@ const store = configureStore({
     courses: coursesReducer,
     courseMaterials: courseMaterialsReducer,
     courseAnnouncements: courseAnnouncementsReducer,
+    assignments: assignmentsReducer,
 
   },
 });
