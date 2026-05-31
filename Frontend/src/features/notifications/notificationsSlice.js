@@ -39,6 +39,28 @@ export const markAllNotificationsRead = createAsyncThunk(
   }
 );
 
+export const respondToConnectionNotification = createAsyncThunk(
+  "notifications/respondToConnection",
+  async ({ connectionId, notificationId, status }, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`/api/discovery/connections/${connectionId}`, { status });
+      if (notificationId) {
+        await api.put(`${NOTIFICATIONS_ENDPOINT}/${notificationId}`);
+      }
+      return {
+        notificationId,
+        connectionId,
+        status,
+        connection: response.data.connection,
+        connectionState: response.data.connectionState,
+        message: response.data.message,
+      };
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
 const notificationsSlice = createSlice({
   name: "notifications",
   initialState: {
@@ -46,6 +68,7 @@ const notificationsSlice = createSlice({
     unreadCount: 0,
     status: "idle",
     error: null,
+    actionLoadingByConnectionId: {},
   },
   reducers: {},
   extraReducers: (builder) => {
@@ -71,6 +94,30 @@ const notificationsSlice = createSlice({
       .addCase(markAllNotificationsRead.fulfilled, (state) => {
         state.items = state.items.map((item) => ({ ...item, read: true }));
         state.unreadCount = 0;
+      })
+      .addCase(respondToConnectionNotification.pending, (state, action) => {
+        const { connectionId } = action.meta.arg;
+        state.actionLoadingByConnectionId[connectionId] = true;
+      })
+      .addCase(respondToConnectionNotification.fulfilled, (state, action) => {
+        const { connection, connectionId, notificationId } = action.payload;
+        delete state.actionLoadingByConnectionId[connectionId];
+        state.items = state.items.map((item) => {
+          const itemConnectionId = item.connection?._id || item.connection;
+          if (item._id === notificationId || String(itemConnectionId) === String(connection?._id || connectionId)) {
+            return {
+              ...item,
+              read: true,
+              connection: connection ? { ...(item.connection || {}), ...connection } : item.connection,
+            };
+          }
+          return item;
+        });
+        state.unreadCount = state.items.filter((item) => !item.read).length;
+      })
+      .addCase(respondToConnectionNotification.rejected, (state, action) => {
+        const { connectionId } = action.meta.arg || {};
+        if (connectionId) delete state.actionLoadingByConnectionId[connectionId];
       });
   },
 });

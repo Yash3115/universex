@@ -4,12 +4,13 @@ const notificationSchema = new mongoose.Schema(
     {
         recipient: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        connection: { type: mongoose.Schema.Types.ObjectId, ref: "Connection" },
         post: { type: mongoose.Schema.Types.ObjectId, ref: "Post" },
         comment: { type: mongoose.Schema.Types.ObjectId, ref: "Comment" },
         job: { type: mongoose.Schema.Types.ObjectId, ref: "Job" },
         type: {
             type: String,
-            enum: ["Like", "Comment", "Reply", "Reaction", "Job", "Academic", "System"],
+            enum: ["Like", "Comment", "Reply", "Reaction", "Job", "Academic", "Connection", "System"],
             required: true,
         },
         message: { type: String, trim: true, default: "" },

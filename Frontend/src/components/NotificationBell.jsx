@@ -6,9 +6,11 @@ import {
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  respondToConnectionNotification,
 } from "../features/notifications/notificationsSlice";
 
 const getNotificationTarget = (notification) => {
+  if (notification.type === "Connection") return "/students";
   if (notification.job?._id) return "/jobs";
   if (notification.post?._id) return "/community";
   return "/dashboard";
@@ -17,7 +19,7 @@ const getNotificationTarget = (notification) => {
 const NotificationBell = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { items, unreadCount } = useSelector((state) => state.notifications);
+  const { actionLoadingByConnectionId, items, unreadCount } = useSelector((state) => state.notifications);
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const [open, setOpen] = useState(false);
 
@@ -35,6 +37,20 @@ const NotificationBell = () => {
     if (!notification.read) dispatch(markNotificationRead(notification._id));
     setOpen(false);
     navigate(getNotificationTarget(notification));
+  };
+
+  const handleConnectionResponse = async (event, notification, status) => {
+    event.stopPropagation();
+    const connectionId = notification.connection?._id || notification.connection;
+    if (!connectionId) return;
+
+    await dispatch(
+      respondToConnectionNotification({
+        connectionId,
+        notificationId: notification._id,
+        status,
+      })
+    );
   };
 
   return (
@@ -61,7 +77,15 @@ const NotificationBell = () => {
             </button>
           </div>
           <div className="max-h-96 overflow-y-auto p-2">
-            {items.length ? items.map((notification) => (
+            {items.length ? items.map((notification) => {
+              const connectionId = notification.connection?._id || notification.connection;
+              const isIncomingConnectionRequest =
+                notification.type === "Connection" &&
+                notification.connection?.status === "pending" &&
+                String(notification.connection?.recipient) !== String(notification.sender?._id);
+              const actionLoading = Boolean(actionLoadingByConnectionId[connectionId]);
+
+              return (
               <button
                 key={notification._id}
                 type="button"
@@ -73,9 +97,30 @@ const NotificationBell = () => {
                 </p>
                 {notification.job?.title && <p className="text-xs text-gray-500">{notification.job.title}</p>}
                 {notification.post?.content && <p className="line-clamp-1 text-xs text-gray-500">{notification.post.content}</p>}
+                {isIncomingConnectionRequest && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="rounded-xl bg-blue-600 px-3 py-2 text-center text-xs font-bold text-white"
+                      onClick={(event) => handleConnectionResponse(event, notification, "accepted")}
+                    >
+                      {actionLoading ? "Accepting..." : "Accept"}
+                    </span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-bold text-gray-600"
+                      onClick={(event) => handleConnectionResponse(event, notification, "rejected")}
+                    >
+                      Ignore
+                    </span>
+                  </div>
+                )}
                 <p className="mt-1 text-[11px] text-gray-400">{new Date(notification.createdAt).toLocaleString()}</p>
               </button>
-            )) : (
+            );
+            }) : (
               <p className="p-6 text-center text-sm text-gray-500">No notifications yet.</p>
             )}
           </div>
