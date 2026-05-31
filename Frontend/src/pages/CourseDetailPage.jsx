@@ -6,6 +6,8 @@ import AssignmentCard from "../components/AssignmentCard";
 import AssignmentFormModal from "../components/AssignmentFormModal";
 import AssessmentCard from "../components/AssessmentCard";
 import AssessmentFormModal from "../components/AssessmentFormModal";
+import CourseQuestionCard from "../components/CourseQuestionCard";
+import CourseQuestionFormModal from "../components/CourseQuestionFormModal";
 import CourseAnnouncementCard from "../components/CourseAnnouncementCard";
 import CourseAnnouncementFormModal from "../components/CourseAnnouncementFormModal";
 import CourseMaterialCard from "../components/CourseMaterialCard";
@@ -15,21 +17,28 @@ import { fetchCourseMaterials, setMaterialFilters } from "../features/courseMate
 import { clearSelectedCourse, fetchCourseById, updateEnrollment } from "../features/courses/coursesSlice";
 import { fetchCourseAssignments } from "../features/assignments/assignmentsSlice";
 import { fetchCourseAssessments } from "../features/results/resultsSlice";
+import { fetchCourseQuestions, setQuestionFilters } from "../features/courseQA/courseQASlice";
 import { getImageUrl } from "../utils/imageUtils";
 
 const CourseDetailPage = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [showAssessmentForm, setShowAssessmentForm] = useState(false);
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
   const [showMaterialUpload, setShowMaterialUpload] = useState(false);
   const { error, selectedCourse, selectedStatus, viewerContext } = useSelector((state) => state.courses);
+  const qaState = useSelector((state) => state.courseQA);
   const resultsState = useSelector((state) => state.results);
   const assignmentState = useSelector((state) => state.assignments);
   const announcementState = useSelector((state) => state.courseAnnouncements);
   const materialState = useSelector((state) => state.courseMaterials);
+  const questions = qaState.questionsByCourseId[id] || [];
+  const questionStatus = qaState.statusByCourseId[id] || "idle";
+  const questionFilters = qaState.filtersByCourseId[id] || { search: "", status: "" };
+  const questionViewerContext = qaState.viewerContextByCourseId[id] || {};
   const assessments = resultsState.assessmentsByCourseId[id] || [];
   const assessmentStatus = resultsState.statusByCourseId[id] || "idle";
   const assessmentViewerContext = resultsState.viewerContextByCourseId[id] || {};
@@ -65,6 +74,10 @@ const CourseDetailPage = () => {
   useEffect(() => {
     if (id) dispatch(fetchCourseAssessments(id));
   }, [dispatch, id]);
+
+  useEffect(() => {
+    if (id) dispatch(fetchCourseQuestions({ courseId: id, filters: questionFilters }));
+  }, [dispatch, id, questionFilters.search, questionFilters.status]);
 
   const updateStudent = async (studentId, status) => {
     try {
@@ -124,6 +137,30 @@ const CourseDetailPage = () => {
                 ))}
               </div>
               {announcementStatus === "succeeded" && announcements.length === 0 && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">No announcements yet.</p>}
+            </div>
+
+            <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900">Q&A / Doubts</h2>
+                  <p className="text-sm text-gray-500">Ask course doubts, answer peers, and find official professor responses.</p>
+                </div>
+                <button className="btn btn-primary rounded-2xl" onClick={() => setShowQuestionForm(true)}>+ Ask question</button>
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                <input className="input input-bordered rounded-2xl" value={questionFilters.search || ""} onChange={(e) => dispatch(setQuestionFilters({ courseId: id, filters: { search: e.target.value } }))} placeholder="Search questions" />
+                <select className="select select-bordered rounded-2xl" value={questionFilters.status || ""} onChange={(e) => dispatch(setQuestionFilters({ courseId: id, filters: { status: e.target.value } }))}>
+                  <option value="">All statuses</option>
+                  <option value="open">Open</option>
+                  <option value="answered">Answered</option>
+                  <option value="closed">Closed</option>
+                </select>
+              </div>
+              {questionStatus === "loading" && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">Loading questions...</p>}
+              <div className="mt-5 space-y-4">
+                {questions.map((question) => <CourseQuestionCard key={question._id} courseId={id} isInstructor={questionViewerContext.isInstructor} question={question} />)}
+              </div>
+              {questionStatus === "succeeded" && questions.length === 0 && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">No questions yet. Ask the first doubt for this course.</p>}
             </div>
 
             <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
@@ -249,6 +286,7 @@ const CourseDetailPage = () => {
         </section>
       </div>
 
+      {showQuestionForm && <CourseQuestionFormModal courseId={id} onClose={() => setShowQuestionForm(false)} />}
       {showAssessmentForm && <AssessmentFormModal courseId={id} onClose={() => setShowAssessmentForm(false)} />}
       {showAssignmentForm && <AssignmentFormModal courseId={id} onClose={() => setShowAssignmentForm(false)} />}
       {showAnnouncementForm && <CourseAnnouncementFormModal courseId={id} onClose={() => setShowAnnouncementForm(false)} />}

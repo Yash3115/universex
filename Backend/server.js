@@ -27,6 +27,7 @@ const interactionRoutes = require("./routes/interactionRoutes.js");
 const courseRoutes = require("./routes/courseRoutes.js");
 const assignmentRoutes = require("./routes/assignmentRoutes.js");
 const resultRoutes = require("./routes/resultRoutes.js");
+const courseQuestionRoutes = require("./routes/courseQuestionRoutes.js");
 const { cloudinaryConnect } = require("./config/cloudinary");
 
 // Initialize Express App
@@ -105,6 +106,7 @@ app.use("/api/interactions", interactionRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/assignments", assignmentRoutes);
 app.use("/api/results", resultRoutes);
+app.use("/api/course-qa", courseQuestionRoutes);
 // Global Error Handling Middleware
 app.use(errorMiddleware);
 

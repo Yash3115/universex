@@ -13,6 +13,7 @@ const getNotificationTarget = (notification) => {
   if (notification.type === "Connection") return "/students";
   if (notification.type === "Interaction") return "/interactions";
   if (notification.assessment?._id) return "/results";
+  if (notification.question?._id) return notification.course?._id ? `/courses/${notification.course._id}` : "/courses";
   if (notification.type === "Academic") return notification.course?._id ? `/courses/${notification.course._id}` : "/courses";
   if (notification.job?._id) return "/jobs";
   if (notification.post?._id) return "/community";

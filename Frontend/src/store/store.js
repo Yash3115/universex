@@ -12,6 +12,7 @@ import courseMaterialsReducer from "../features/courseMaterials/courseMaterialsS
 import courseAnnouncementsReducer from "../features/courseAnnouncements/courseAnnouncementsSlice";
 import assignmentsReducer from "../features/assignments/assignmentsSlice";
 import resultsReducer from "../features/results/resultsSlice";
+import courseQAReducer from "../features/courseQA/courseQASlice";
 
 
 const store = configureStore({
@@ -29,6 +30,7 @@ const store = configureStore({
     courseAnnouncements: courseAnnouncementsReducer,
     assignments: assignmentsReducer,
     results: resultsReducer,
+    courseQA: courseQAReducer,
 
   },
 });
