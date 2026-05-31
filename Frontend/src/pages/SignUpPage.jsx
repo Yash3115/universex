@@ -17,7 +17,9 @@ const SignUp = () => {
     gender: "",
     dateOfBirth: "",
     department: "",
-    role: "",
+    role: "Student",
+    employeeId: "",
+    designation: "",
     year: "",
     otp: "",
   });
@@ -66,6 +68,11 @@ const SignUp = () => {
     if (!formData.gender) validationErrors.gender = "Please select your gender";
     if (!formData.dateOfBirth)
       validationErrors.dateOfBirth = "Date of Birth is required";
+    if (formData.role === "Professor") {
+      if (!formData.employeeId) validationErrors.employeeId = "Faculty ID is required";
+      if (!formData.designation) validationErrors.designation = "Designation is required";
+      if (!formData.department) validationErrors.department = "Department is required";
+    }
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
@@ -149,6 +156,58 @@ const SignUp = () => {
                 )}
               </div>
             </div>
+
+            <div className="mb-2">
+              <label className="block text-gray-700">Account Type</label>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className="w-full p-2 mt-1 rounded-lg bg-white text-black border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+              >
+                <option value="Student">Student</option>
+                <option value="Professor">Professor</option>
+              </select>
+            </div>
+
+            {formData.role === "Professor" && (
+              <div className="mb-2 grid grid-cols-1 gap-2 md:grid-cols-3">
+                <div>
+                  <label className="block text-gray-700">Faculty ID</label>
+                  <input
+                    type="text"
+                    name="employeeId"
+                    value={formData.employeeId}
+                    onChange={handleChange}
+                    className="w-full p-2 mt-1 rounded-lg bg-white text-black border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  />
+                  {errors.employeeId && <p className="text-red-500 text-sm mt-1">{errors.employeeId}</p>}
+                </div>
+                <div>
+                  <label className="block text-gray-700">Designation</label>
+                  <input
+                    type="text"
+                    name="designation"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    placeholder="Assistant Professor"
+                    className="w-full p-2 mt-1 rounded-lg bg-white text-black border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  />
+                  {errors.designation && <p className="text-red-500 text-sm mt-1">{errors.designation}</p>}
+                </div>
+                <div>
+                  <label className="block text-gray-700">Department</label>
+                  <input
+                    type="text"
+                    name="department"
+                    value={formData.department}
+                    onChange={handleChange}
+                    className="w-full p-2 mt-1 rounded-lg bg-white text-black border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  />
+                  {errors.department && <p className="text-red-500 text-sm mt-1">{errors.department}</p>}
+                </div>
+              </div>
+            )}
 
             <div className="mb-2">
               <label className="block text-gray-700">Email Address</label>

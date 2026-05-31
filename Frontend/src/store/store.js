@@ -7,6 +7,7 @@ import notificationsReducer from "../features/notifications/notificationsSlice";
 import budgetReducer from "../features/budget/budgetSlice";
 import discoveryReducer from "../features/discovery/discoverySlice";
 import interactionsReducer from "../features/interactions/interactionsSlice";
+import coursesReducer from "../features/courses/coursesSlice";
 
 
 const store = configureStore({
@@ -19,6 +20,7 @@ const store = configureStore({
     budget: budgetReducer,
     discovery: discoveryReducer,
     interactions: interactionsReducer,
+    courses: coursesReducer,
 
   },
 });

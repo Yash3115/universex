@@ -9,6 +9,10 @@ const pendingSignupSchema = new mongoose.Schema({
   gender: { type: String, required: true },
   dateOfBirth: { type: String, required: true },
   college: { type: String, required: true },
+  role: { type: String, enum: ["Student", "Professor"], default: "Student" },
+  employeeId: { type: String, trim: true, default: "" },
+  designation: { type: String, trim: true, default: "" },
+  department: { type: String, trim: true, default: "" },
   createdAt: {
     type: Date,
     default: Date.now,

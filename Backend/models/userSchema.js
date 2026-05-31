@@ -1,5 +1,16 @@
 const mongoose = require("mongoose");
 
+const imageSchema = new mongoose.Schema(
+    {
+        url: { type: String, default: "" },
+        publicId: { type: String, default: "" },
+        width: { type: Number },
+        height: { type: Number },
+        format: { type: String, default: "" },
+    },
+    { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
     {
         firstName: { type: String, required: true, trim: true },
@@ -14,7 +25,7 @@ const userSchema = new mongoose.Schema(
             type: String,
         },
         college: { type: String, required: true },
-        image: { type: String}, // Profile picture
+        image: { type: mongoose.Schema.Types.Mixed, default: null }, // string legacy URL or image metadata object
         additionalDetails: {
 			type: mongoose.Schema.Types.ObjectId,
 			required: true,
@@ -31,7 +42,9 @@ const userSchema = new mongoose.Schema(
         comments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }],
         likedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
         savedPosts: [{ type: mongoose.Schema.Types.ObjectId, ref: "Post" }],
-        role: { type: String, enum: ["Admin", "Student"], default: "Student" },
+        role: { type: String, enum: ["Admin", "Student", "Professor"], default: "Student" },
+        facultyProfile: { type: mongoose.Schema.Types.ObjectId, ref: "FacultyProfile" },
+        verificationStatus: { type: String, enum: ["pending", "verified", "rejected"], default: "verified" },
         active: { type: Boolean, default: true },
     },
     { timestamps: true }

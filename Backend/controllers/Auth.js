@@ -7,6 +7,7 @@ const PendingSignup = require("../models/pendingSignupSchema");
 const mailSender = require("../utils/mailSender");
 const { passwordUpdated } = require("../mail/templates/passwordUpdate");
 const Profile = require("../models/profileSchema");
+const FacultyProfile = require("../models/facultyProfileSchema");
 const {
   getAuthCookieOptions,
   getClearAuthCookieOptions,
@@ -26,6 +27,10 @@ exports.signup = async (req, res) => {
       gender,
       dateOfBirth,
       college,
+      role = "Student",
+      employeeId = "",
+      designation = "",
+      department = "",
     } = req.body;
     const normalizedEmail = email?.trim().toLowerCase();
 
@@ -39,10 +44,19 @@ exports.signup = async (req, res) => {
     const pendingSignup = await PendingSignup.findOne({ email: normalizedEmail });
     const usingPendingSignup = Boolean(pendingSignup);
 
+    const normalizedRole = role === "Professor" ? "Professor" : "Student";
+
     if (!usingPendingSignup && (!firstName || !lastName || !password || !gender || !dateOfBirth || !college)) {
       return res.status(400).json({
         success: false,
         message: "Signup session expired. Please request a new OTP.",
+      });
+    }
+
+    if (!usingPendingSignup && normalizedRole === "Professor" && (!employeeId || !designation || !department)) {
+      return res.status(400).json({
+        success: false,
+        message: "Faculty ID, designation, and department are required for professor signup",
       });
     }
 
@@ -75,6 +89,10 @@ exports.signup = async (req, res) => {
           gender: pendingSignup.gender,
           dateOfBirth: pendingSignup.dateOfBirth,
           college: pendingSignup.college,
+          role: pendingSignup.role || "Student",
+          employeeId: pendingSignup.employeeId || "",
+          designation: pendingSignup.designation || "",
+          department: pendingSignup.department || "",
           hashedPassword: pendingSignup.hashedPassword,
         }
       : {
@@ -85,6 +103,10 @@ exports.signup = async (req, res) => {
           gender,
           dateOfBirth,
           college,
+          role: normalizedRole,
+          employeeId,
+          designation,
+          department,
           hashedPassword: await bcrypt.hash(password, 10),
         };
 
@@ -95,6 +117,15 @@ exports.signup = async (req, res) => {
       about: null,
       contactNumber: signupData.contactNumber || null,
     });
+
+    let facultyProfile = null;
+    if (signupData.role === "Professor") {
+      facultyProfile = await FacultyProfile.create({
+        employeeId: signupData.employeeId,
+        designation: signupData.designation,
+        department: signupData.department,
+      });
+    }
 
     // Create User
     const user = await User.create({
@@ -107,9 +138,18 @@ exports.signup = async (req, res) => {
       gender: signupData.gender,
       dateOfBirth: signupData.dateOfBirth,
       additionalDetails: profileDetails._id,
-      role: "Student",
-      image: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpmteUFDtMLPVMxqUwYc5I7vMhEi8RKQznPSeSMKZ_FG5DBWGDs25O8cK7N10GhNudeRY&usqp=CAU",
+      role: signupData.role,
+      facultyProfile: facultyProfile?._id,
+      verificationStatus: signupData.role === "Professor" ? "pending" : "verified",
+      image: {
+        url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpmteUFDtMLPVMxqUwYc5I7vMhEi8RKQznPSeSMKZ_FG5DBWGDs25O8cK7N10GhNudeRY&usqp=CAU",
+      },
     });
+
+    if (facultyProfile) {
+      facultyProfile.user = user._id;
+      await facultyProfile.save();
+    }
 
     await OTP.deleteMany({ email: normalizedEmail });
     await PendingSignup.deleteOne({ email: normalizedEmail });
@@ -143,7 +183,7 @@ exports.login = async (req, res) => {
     }
 
     // Find user
-    const user = await User.findOne({ email }).populate("additionalDetails");
+    const user = await User.findOne({ email }).populate("additionalDetails").populate("facultyProfile");
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -196,6 +236,10 @@ exports.sendotp = async (req, res) => {
       gender,
       dateOfBirth,
       college,
+      role = "Student",
+      employeeId = "",
+      designation = "",
+      department = "",
     } = req.body;
     const normalizedEmail = email?.trim().toLowerCase();
 
@@ -217,11 +261,20 @@ exports.sendotp = async (req, res) => {
 
     const hasSignupPayload = Boolean(firstName || lastName || password || contactNumber || gender || dateOfBirth || college);
 
+    const normalizedRole = role === "Professor" ? "Professor" : "Student";
+
     if (hasSignupPayload) {
       if (!firstName || !lastName || !password || !gender || !dateOfBirth || !college) {
         return res.status(400).json({
           success: false,
           message: "All required signup fields are required before sending OTP",
+        });
+      }
+
+      if (normalizedRole === "Professor" && (!employeeId || !designation || !department)) {
+        return res.status(400).json({
+          success: false,
+          message: "Faculty ID, designation, and department are required for professor signup",
         });
       }
 
@@ -237,6 +290,10 @@ exports.sendotp = async (req, res) => {
           gender,
           dateOfBirth,
           college,
+          role: normalizedRole,
+          employeeId,
+          designation,
+          department,
           createdAt: new Date(),
         },
         { upsert: true, new: true, setDefaultsOnInsert: true }
@@ -360,7 +417,7 @@ exports.getBalance = async (req, res) => {
 
 exports.getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select("-password").populate("additionalDetails");
+    const user = await User.findById(req.user.id).select("-password").populate("additionalDetails").populate("facultyProfile");
 
     if (!user) {
       return res.status(404).json({ success: false, message: "User not found" });
