@@ -6,6 +6,7 @@ const {
   requestConnection,
   respondToConnection,
   searchStudents,
+  updateConnectionPreferences,
 } = require("../controllers/discoveryController");
 const { authMiddleware } = require("../middlewares/authMiddleware");
 
@@ -16,6 +17,7 @@ router.get("/students", searchStudents);
 router.get("/connections", getMyConnections);
 router.get("/connections/summary", getConnectionSummary);
 router.post("/connections", requestConnection);
+router.patch("/connections/:id/preferences", updateConnectionPreferences);
 router.put("/connections/:id", respondToConnection);
 router.delete("/connections/:id", removeConnection);
 

@@ -95,6 +95,18 @@ export const removeConnection = createAsyncThunk(
   }
 );
 
+export const updateConnectionPreferences = createAsyncThunk(
+  "discovery/updateConnectionPreferences",
+  async ({ connectionId, preferences }, { rejectWithValue }) => {
+    try {
+      const response = await api.patch(`/api/discovery/connections/${connectionId}/preferences`, preferences);
+      return response.data.connection;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
 const defaultConnection = { id: null, status: "none", direction: "none" };
 
 const getStudentConnectionState = (student) =>
@@ -240,6 +252,24 @@ const discoverySlice = createSlice({
       })
       .addCase(removeConnection.rejected, (state, action) => {
         delete state.actionLoadingByConnectionId[action.meta.arg];
+      })
+      .addCase(updateConnectionPreferences.pending, (state, action) => {
+        state.actionLoadingByConnectionId[action.meta.arg.connectionId] = true;
+      })
+      .addCase(updateConnectionPreferences.fulfilled, (state, action) => {
+        const updatedConnection = action.payload;
+        if (updatedConnection?._id) {
+          delete state.actionLoadingByConnectionId[updatedConnection._id];
+          state.connections = state.connections.map((connection) =>
+            String(connection._id) === String(updatedConnection._id) ? updatedConnection : connection
+          );
+          state.connectionSummary.recentConnections = (state.connectionSummary.recentConnections || []).map((connection) =>
+            String(connection._id) === String(updatedConnection._id) ? updatedConnection : connection
+          );
+        }
+      })
+      .addCase(updateConnectionPreferences.rejected, (state, action) => {
+        delete state.actionLoadingByConnectionId[action.meta.arg?.connectionId];
       });
   },
 });

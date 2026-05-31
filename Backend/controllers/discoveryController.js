@@ -3,6 +3,11 @@ const User = require("../models/userSchema");
 const { createNotification } = require("../utils/notificationService");
 const mongoose = require("mongoose");
 
+const buildPairKey = (firstUserId, secondUserId) => {
+  if (!firstUserId || !secondUserId) return undefined;
+  return [String(firstUserId), String(secondUserId)].sort().join(":");
+};
+
 const buildConnectionState = (connection, currentUserId) => {
   if (!connection) {
     return { id: null, status: "none", direction: "none" };
@@ -54,17 +59,44 @@ const getOtherStudent = (connection, currentUserId) => {
 const serializeConnection = (connection, currentUserId) => {
   const student = getOtherStudent(connection, currentUserId);
   const state = buildConnectionState(connection, currentUserId);
+  const currentId = String(currentUserId);
+  const getPreferenceValue = (items = []) =>
+    items.find((item) => String(item.user?._id || item.user) === currentId)?.value || "";
 
   return {
     _id: connection._id,
     status: connection.status,
     direction: state.direction,
     connectionState: state,
-    connectedAt: connection.status === "accepted" ? connection.updatedAt : null,
+    connectedAt: connection.status === "accepted" ? connection.acceptedAt || connection.updatedAt : null,
     createdAt: connection.createdAt,
     updatedAt: connection.updatedAt,
+    viewerPreferences: {
+      favorite: (connection.favoriteBy || []).some((userId) => String(userId?._id || userId) === currentId),
+      muted: (connection.mutedBy || []).some((userId) => String(userId?._id || userId) === currentId),
+      label: getPreferenceValue(connection.labels),
+      note: getPreferenceValue(connection.notes),
+    },
     student: student?.toObject ? student.toObject() : student,
   };
+};
+
+const setUserPreference = (items = [], userId, value) => {
+  const nextItems = items.filter((item) => String(item.user?._id || item.user) !== String(userId));
+  const normalizedValue = String(value || "").trim();
+
+  if (normalizedValue) {
+    nextItems.push({ user: userId, value: normalizedValue, updatedAt: new Date() });
+  }
+
+  return nextItems;
+};
+
+const setUserFlag = (items = [], userId, enabled) => {
+  const exists = items.some((item) => String(item?._id || item) === String(userId));
+  if (enabled && !exists) return [...items, userId];
+  if (!enabled && exists) return items.filter((item) => String(item?._id || item) !== String(userId));
+  return items;
 };
 
 const normalizeText = (value) => String(value || "").trim().toLowerCase();
@@ -182,8 +214,10 @@ exports.requestConnection = async (req, res) => {
       return res.status(404).json({ success: false, message: "Recipient not found" });
     }
 
+    const pairKey = buildPairKey(req.user.id, recipientId);
     const existingConnection = await Connection.findOne({
       $or: [
+        { pairKey },
         { requester: req.user.id, recipient: recipientId },
         { requester: recipientId, recipient: req.user.id },
       ],
@@ -202,6 +236,7 @@ exports.requestConnection = async (req, res) => {
       const incomingRequest = String(existingConnection.recipient) === String(req.user.id);
       if (existingConnection.status === "pending" && incomingRequest) {
         existingConnection.status = "accepted";
+        existingConnection.acceptedAt = new Date();
         await existingConnection.save();
         await createNotification({
           recipient: existingConnection.requester,
@@ -231,6 +266,7 @@ exports.requestConnection = async (req, res) => {
       existingConnection.requester = req.user.id;
       existingConnection.recipient = recipientId;
       existingConnection.status = "pending";
+      existingConnection.acceptedAt = null;
       await existingConnection.save();
 
       await createNotification({
@@ -249,11 +285,7 @@ exports.requestConnection = async (req, res) => {
       });
     }
 
-    const connection = await Connection.findOneAndUpdate(
-      { requester: req.user.id, recipient: recipientId },
-      { status: "pending" },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    const connection = await Connection.create({ requester: req.user.id, recipient: recipientId, status: "pending" });
 
     await createNotification({
       recipient: recipientId,
@@ -281,9 +313,12 @@ exports.respondToConnection = async (req, res) => {
       return res.status(400).json({ success: false, message: "Valid status is required" });
     }
 
+    const update = { status };
+    if (status === "accepted") update.acceptedAt = new Date();
+
     const connection = await Connection.findOneAndUpdate(
       { _id: req.params.id, recipient: req.user.id, status: "pending" },
-      { status },
+      update,
       { new: true }
     );
 
@@ -413,5 +448,50 @@ exports.removeConnection = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, message: "Failed to remove connection", error: error.message });
+  }
+};
+
+exports.updateConnectionPreferences = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Valid connection id is required" });
+    }
+
+    const connection = await Connection.findOne({
+      _id: id,
+      $or: [{ requester: req.user.id }, { recipient: req.user.id }],
+    });
+
+    if (!connection) {
+      return res.status(404).json({ success: false, message: "Connection not found" });
+    }
+
+    if (req.body.favorite !== undefined) {
+      connection.favoriteBy = setUserFlag(connection.favoriteBy, req.user.id, Boolean(req.body.favorite));
+    }
+
+    if (req.body.muted !== undefined) {
+      connection.mutedBy = setUserFlag(connection.mutedBy, req.user.id, Boolean(req.body.muted));
+    }
+
+    if (req.body.label !== undefined) {
+      connection.labels = setUserPreference(connection.labels, req.user.id, req.body.label);
+    }
+
+    if (req.body.note !== undefined) {
+      connection.notes = setUserPreference(connection.notes, req.user.id, req.body.note);
+    }
+
+    await connection.save();
+    await connection.populate(connectionPopulateOptions);
+
+    res.status(200).json({
+      success: true,
+      message: "Connection preferences updated",
+      connection: serializeConnection(connection, req.user.id),
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: "Failed to update connection preferences", error: error.message });
   }
 };

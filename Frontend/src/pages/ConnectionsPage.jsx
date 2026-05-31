@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import {
@@ -7,6 +7,7 @@ import {
   removeConnection,
   respondToConnection,
   setConnectionFilters,
+  updateConnectionPreferences,
 } from "../features/discovery/discoverySlice";
 import { getImageUrl } from "../utils/imageUtils";
 
@@ -29,8 +30,12 @@ const formatDate = (value) => {
 
 const getConnectionId = (connection) => connection?.connectionState?.id || connection?._id;
 
+const labelOptions = ["", "Classmate", "Friend", "Project teammate", "Senior", "Mentor", "Study buddy"];
+
 const ConnectionsPage = () => {
   const dispatch = useDispatch();
+  const [editingNotesByConnectionId, setEditingNotesByConnectionId] = useState({});
+  const [pendingRemoval, setPendingRemoval] = useState(null);
   const {
     actionLoadingByConnectionId,
     connectionFilters,
@@ -68,7 +73,30 @@ const ConnectionsPage = () => {
       dispatch(fetchConnectionSummary());
     } catch (error) {
       toast.error(error || "Unable to remove connection");
+    } finally {
+      setPendingRemoval(null);
     }
+  };
+
+  const handlePreferenceUpdate = async (connection, preferences) => {
+    const connectionId = getConnectionId(connection);
+    if (!connectionId) return;
+
+    try {
+      await dispatch(updateConnectionPreferences({ connectionId, preferences })).unwrap();
+      toast.success("Connection updated");
+    } catch (error) {
+      toast.error(error || "Unable to update connection");
+    }
+  };
+
+  const handleNoteChange = (connectionId, value) => {
+    setEditingNotesByConnectionId((current) => ({ ...current, [connectionId]: value }));
+  };
+
+  const getDraftNote = (connection) => {
+    const connectionId = getConnectionId(connection);
+    return editingNotesByConnectionId[connectionId] ?? connection.viewerPreferences?.note ?? "";
   };
 
   const handleRespond = async (connection, status) => {
@@ -163,6 +191,8 @@ const ConnectionsPage = () => {
                 const details = student.additionalDetails || {};
                 const connectionId = getConnectionId(connection);
                 const isLoading = Boolean(actionLoadingByConnectionId[connectionId]);
+                const preferences = connection.viewerPreferences || {};
+                const draftNote = getDraftNote(connection);
 
                 return (
                   <article key={connection._id} className="rounded-3xl bg-white p-5 shadow-xl shadow-slate-200/70 transition hover:-translate-y-1 hover:shadow-2xl">
@@ -172,6 +202,17 @@ const ConnectionsPage = () => {
                         <h2 className="truncate text-lg font-black text-gray-900">{student.firstName} {student.lastName}</h2>
                         <p className="truncate text-sm text-gray-500">{student.college || "College not added"}</p>
                       </div>
+                      {connection.status === "accepted" && (
+                        <button
+                          type="button"
+                          className={`ml-auto rounded-full px-3 py-1 text-lg transition ${preferences.favorite ? "bg-amber-100 text-amber-600" : "bg-slate-100 text-slate-400 hover:bg-amber-50 hover:text-amber-500"}`}
+                          disabled={isLoading}
+                          title={preferences.favorite ? "Remove from favorites" : "Add to favorites"}
+                          onClick={() => handlePreferenceUpdate(connection, { favorite: !preferences.favorite })}
+                        >
+                          ★
+                        </button>
+                      )}
                     </div>
 
                     <p className="mt-4 line-clamp-3 text-sm leading-6 text-gray-600">{details.about || "No bio added yet."}</p>
@@ -189,6 +230,40 @@ const ConnectionsPage = () => {
                       </div>
                     )}
 
+                    {connection.status === "accepted" && (
+                      <div className="mt-4 space-y-3 rounded-2xl bg-slate-50 p-3">
+                        <select
+                          className="select select-bordered select-sm w-full rounded-xl bg-white"
+                          value={preferences.label || ""}
+                          disabled={isLoading}
+                          onChange={(event) => handlePreferenceUpdate(connection, { label: event.target.value })}
+                        >
+                          {labelOptions.map((label) => (
+                            <option key={label || "none"} value={label}>{label || "Add relationship label"}</option>
+                          ))}
+                        </select>
+                        <textarea
+                          className="textarea textarea-bordered min-h-20 w-full rounded-xl bg-white text-sm"
+                          value={draftNote}
+                          disabled={isLoading}
+                          maxLength={240}
+                          placeholder="Private note about this connection"
+                          onChange={(event) => handleNoteChange(connectionId, event.target.value)}
+                        />
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-gray-400">Only you can see labels and notes.</span>
+                          <button
+                            type="button"
+                            className="btn btn-xs rounded-xl"
+                            disabled={isLoading || draftNote === (preferences.note || "")}
+                            onClick={() => handlePreferenceUpdate(connection, { note: draftNote })}
+                          >
+                            Save note
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <p className="mt-4 text-xs font-semibold text-gray-400">
                       {connection.status === "accepted" ? `Connected ${formatDate(connection.connectedAt)}` : `Requested ${formatDate(connection.createdAt)}`}
                     </p>
@@ -201,7 +276,7 @@ const ConnectionsPage = () => {
                     ) : (
                       <div className="mt-4 grid grid-cols-2 gap-2">
                         <button className="btn rounded-2xl" disabled>Message soon</button>
-                        <button className="btn rounded-2xl border-red-100 bg-red-50 text-red-600 hover:bg-red-100" disabled={isLoading} onClick={() => handleRemove(connection)}>{isLoading ? "Removing..." : connection.status === "accepted" ? "Remove" : "Cancel"}</button>
+                        <button className="btn rounded-2xl border-red-100 bg-red-50 text-red-600 hover:bg-red-100" disabled={isLoading} onClick={() => setPendingRemoval(connection)}>{isLoading ? "Removing..." : connection.status === "accepted" ? "Remove" : "Cancel"}</button>
                       </div>
                     )}
                   </article>
@@ -242,6 +317,27 @@ const ConnectionsPage = () => {
           </aside>
         </section>
       </div>
+
+      {pendingRemoval && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-black text-gray-900">
+              {pendingRemoval.status === "accepted" ? "Remove connection?" : "Cancel request?"}
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-gray-600">
+              {pendingRemoval.status === "accepted"
+                ? `This will remove ${pendingRemoval.student?.firstName || "this student"} from your network.`
+                : "This will remove the pending connection request."}
+            </p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <button className="btn rounded-2xl" onClick={() => setPendingRemoval(null)}>Keep</button>
+              <button className="btn rounded-2xl border-none bg-red-600 text-white hover:bg-red-700" onClick={() => handleRemove(pendingRemoval)}>
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
