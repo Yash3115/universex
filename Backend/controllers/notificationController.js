@@ -12,6 +12,7 @@ exports.getNotifications = async (req, res) => {
             .populate("announcement", "title priority")
             .populate("assignment", "title dueDate")
             .populate("submission", "status marksAwarded")
+            .populate("assessment", "title type")
             .populate("post", "content")
             .populate("job", "title companyName")
             .sort({ createdAt: -1 })

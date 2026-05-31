@@ -4,6 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import AssignmentCard from "../components/AssignmentCard";
 import AssignmentFormModal from "../components/AssignmentFormModal";
+import AssessmentCard from "../components/AssessmentCard";
+import AssessmentFormModal from "../components/AssessmentFormModal";
 import CourseAnnouncementCard from "../components/CourseAnnouncementCard";
 import CourseAnnouncementFormModal from "../components/CourseAnnouncementFormModal";
 import CourseMaterialCard from "../components/CourseMaterialCard";
@@ -12,19 +14,25 @@ import { fetchCourseAnnouncements, setAnnouncementFilters } from "../features/co
 import { fetchCourseMaterials, setMaterialFilters } from "../features/courseMaterials/courseMaterialsSlice";
 import { clearSelectedCourse, fetchCourseById, updateEnrollment } from "../features/courses/coursesSlice";
 import { fetchCourseAssignments } from "../features/assignments/assignmentsSlice";
+import { fetchCourseAssessments } from "../features/results/resultsSlice";
 import { getImageUrl } from "../utils/imageUtils";
 
 const CourseDetailPage = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [showAssessmentForm, setShowAssessmentForm] = useState(false);
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
   const [showMaterialUpload, setShowMaterialUpload] = useState(false);
   const { error, selectedCourse, selectedStatus, viewerContext } = useSelector((state) => state.courses);
+  const resultsState = useSelector((state) => state.results);
   const assignmentState = useSelector((state) => state.assignments);
   const announcementState = useSelector((state) => state.courseAnnouncements);
   const materialState = useSelector((state) => state.courseMaterials);
+  const assessments = resultsState.assessmentsByCourseId[id] || [];
+  const assessmentStatus = resultsState.statusByCourseId[id] || "idle";
+  const assessmentViewerContext = resultsState.viewerContextByCourseId[id] || {};
   const assignments = assignmentState.assignmentsByCourseId[id] || [];
   const assignmentStatus = assignmentState.statusByCourseId[id] || "idle";
   const assignmentViewerContext = assignmentState.viewerContextByCourseId[id] || {};
@@ -52,6 +60,10 @@ const CourseDetailPage = () => {
 
   useEffect(() => {
     if (id) dispatch(fetchCourseAssignments(id));
+  }, [dispatch, id]);
+
+  useEffect(() => {
+    if (id) dispatch(fetchCourseAssessments(id));
   }, [dispatch, id]);
 
   const updateStudent = async (studentId, status) => {
@@ -164,6 +176,27 @@ const CourseDetailPage = () => {
             </div>
 
             <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900">Results / Gradebook</h2>
+                  <p className="text-sm text-gray-500">Assessments, marks, private feedback, and published results.</p>
+                </div>
+                {assessmentViewerContext.isInstructor ? (
+                  <button className="btn btn-primary rounded-2xl" onClick={() => setShowAssessmentForm(true)}>+ Create assessment</button>
+                ) : (
+                  <button className="btn rounded-2xl" onClick={() => navigate("/results")}>My Results</button>
+                )}
+              </div>
+              {assessmentStatus === "loading" && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">Loading assessments...</p>}
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {assessments.map((assessment) => (
+                  <AssessmentCard key={assessment._id} assessment={assessment} course={selectedCourse} isInstructor={assessmentViewerContext.isInstructor} />
+                ))}
+              </div>
+              {assessmentStatus === "succeeded" && assessments.length === 0 && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">No assessments created yet.</p>}
+            </div>
+
+            <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
               <h2 className="text-2xl font-black text-gray-900">Roster</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {enrolled.map((item) => (
@@ -184,7 +217,7 @@ const CourseDetailPage = () => {
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl bg-blue-50 p-4 text-blue-700"><p className="font-black">Material comments</p><p className="text-sm">Discuss course resources.</p></div>
                 <div className="rounded-2xl bg-purple-50 p-4 text-purple-700"><p className="font-black">Announcement read receipts</p><p className="text-sm">Track who has seen updates.</p></div>
-                <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700"><p className="font-black">Results</p><p className="text-sm">Publish secure gradebooks.</p></div>
+                <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700"><p className="font-black">Result analytics</p><p className="text-sm">Charts, averages, and exports.</p></div>
               </div>
             </div>
           </main>
@@ -216,6 +249,7 @@ const CourseDetailPage = () => {
         </section>
       </div>
 
+      {showAssessmentForm && <AssessmentFormModal courseId={id} onClose={() => setShowAssessmentForm(false)} />}
       {showAssignmentForm && <AssignmentFormModal courseId={id} onClose={() => setShowAssignmentForm(false)} />}
       {showAnnouncementForm && <CourseAnnouncementFormModal courseId={id} onClose={() => setShowAnnouncementForm(false)} />}
       {showMaterialUpload && <CourseMaterialUploadModal courseId={id} onClose={() => setShowMaterialUpload(false)} />}

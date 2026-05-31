@@ -11,6 +11,7 @@ const notificationSchema = new mongoose.Schema(
         announcement: { type: mongoose.Schema.Types.ObjectId, ref: "CourseAnnouncement" },
         assignment: { type: mongoose.Schema.Types.ObjectId, ref: "Assignment" },
         submission: { type: mongoose.Schema.Types.ObjectId, ref: "AssignmentSubmission" },
+        assessment: { type: mongoose.Schema.Types.ObjectId, ref: "Assessment" },
         post: { type: mongoose.Schema.Types.ObjectId, ref: "Post" },
         comment: { type: mongoose.Schema.Types.ObjectId, ref: "Comment" },
         job: { type: mongoose.Schema.Types.ObjectId, ref: "Job" },
