@@ -15,6 +15,8 @@ const notificationSchema = new mongoose.Schema(
         question: { type: mongoose.Schema.Types.ObjectId, ref: "CourseQuestion" },
         answer: { type: mongoose.Schema.Types.ObjectId, ref: "CourseAnswer" },
         attendanceSession: { type: mongoose.Schema.Types.ObjectId, ref: "CourseAttendanceSession" },
+        officeHourSlot: { type: mongoose.Schema.Types.ObjectId, ref: "OfficeHourSlot" },
+        officeHourBooking: { type: mongoose.Schema.Types.ObjectId, ref: "OfficeHourBooking" },
         post: { type: mongoose.Schema.Types.ObjectId, ref: "Post" },
         comment: { type: mongoose.Schema.Types.ObjectId, ref: "Comment" },
         job: { type: mongoose.Schema.Types.ObjectId, ref: "Job" },

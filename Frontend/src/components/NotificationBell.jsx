@@ -15,6 +15,7 @@ const getNotificationTarget = (notification) => {
   if (notification.assessment?._id) return "/results";
   if (notification.question?._id) return notification.course?._id ? `/courses/${notification.course._id}` : "/courses";
   if (notification.attendanceSession?._id) return notification.course?._id ? `/courses/${notification.course._id}` : "/courses";
+  if (notification.officeHourBooking?._id || notification.officeHourSlot?._id) return "/office-hours";
   if (notification.type === "Academic") return notification.course?._id ? `/courses/${notification.course._id}` : "/courses";
   if (notification.job?._id) return "/jobs";
   if (notification.post?._id) return "/community";

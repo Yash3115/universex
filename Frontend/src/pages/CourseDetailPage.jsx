@@ -8,6 +8,9 @@ import AssessmentCard from "../components/AssessmentCard";
 import AssessmentFormModal from "../components/AssessmentFormModal";
 import AttendanceSessionCard from "../components/AttendanceSessionCard";
 import AttendanceSessionFormModal from "../components/AttendanceSessionFormModal";
+import OfficeHourBookingPanel from "../components/OfficeHourBookingPanel";
+import OfficeHourSlotCard from "../components/OfficeHourSlotCard";
+import OfficeHourSlotFormModal from "../components/OfficeHourSlotFormModal";
 import CourseQuestionCard from "../components/CourseQuestionCard";
 import CourseQuestionFormModal from "../components/CourseQuestionFormModal";
 import CourseAnnouncementCard from "../components/CourseAnnouncementCard";
@@ -21,12 +24,14 @@ import { fetchCourseAssignments } from "../features/assignments/assignmentsSlice
 import { fetchCourseAssessments } from "../features/results/resultsSlice";
 import { fetchCourseQuestions, setQuestionFilters } from "../features/courseQA/courseQASlice";
 import { fetchCourseAttendance } from "../features/courseAttendance/courseAttendanceSlice";
+import { fetchCourseOfficeHourSlots, fetchProfessorOfficeHourBookings } from "../features/officeHours/officeHoursSlice";
 import { getImageUrl } from "../utils/imageUtils";
 
 const CourseDetailPage = () => {
   const { id } = useParams();
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [showOfficeHourForm, setShowOfficeHourForm] = useState(false);
   const [showAttendanceForm, setShowAttendanceForm] = useState(false);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [showAssessmentForm, setShowAssessmentForm] = useState(false);
@@ -34,12 +39,16 @@ const CourseDetailPage = () => {
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
   const [showMaterialUpload, setShowMaterialUpload] = useState(false);
   const { error, selectedCourse, selectedStatus, viewerContext } = useSelector((state) => state.courses);
+  const officeHoursState = useSelector((state) => state.officeHours);
   const attendanceState = useSelector((state) => state.courseAttendance);
   const qaState = useSelector((state) => state.courseQA);
   const resultsState = useSelector((state) => state.results);
   const assignmentState = useSelector((state) => state.assignments);
   const announcementState = useSelector((state) => state.courseAnnouncements);
   const materialState = useSelector((state) => state.courseMaterials);
+  const officeHourSlots = officeHoursState.slotsByCourseId[id] || [];
+  const officeHourBookings = officeHoursState.professorBookings || [];
+  const officeHourCourseBookings = officeHourBookings.filter((booking) => String(booking.course?._id || booking.course) === String(id));
   const attendanceSessions = attendanceState.sessionsByCourseId[id] || [];
   const attendanceStatus = attendanceState.statusByCourseId[id] || "idle";
   const attendanceViewerContext = attendanceState.viewerContextByCourseId[id] || {};
@@ -92,6 +101,14 @@ const CourseDetailPage = () => {
   useEffect(() => {
     if (id) dispatch(fetchCourseAttendance(id));
   }, [dispatch, id]);
+
+  useEffect(() => {
+    if (id) dispatch(fetchCourseOfficeHourSlots(id));
+  }, [dispatch, id]);
+
+  useEffect(() => {
+    if (viewerContext?.isInstructor) dispatch(fetchProfessorOfficeHourBookings());
+  }, [dispatch, viewerContext?.isInstructor]);
 
   const updateStudent = async (studentId, status) => {
     try {
@@ -278,6 +295,21 @@ const CourseDetailPage = () => {
             </div>
 
             <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900">Office Hours</h2>
+                  <p className="text-sm text-gray-500">Book professor guidance slots for doubts, results, projects, and mentoring.</p>
+                </div>
+                {viewerContext?.isInstructor ? <button className="btn btn-primary rounded-2xl" onClick={() => setShowOfficeHourForm(true)}>+ Create slot</button> : <button className="btn rounded-2xl" onClick={() => navigate("/office-hours")}>My bookings</button>}
+              </div>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                {officeHourSlots.map((slot) => <OfficeHourSlotCard key={slot._id} courseId={id} isProfessor={viewerContext?.isInstructor} slot={slot} />)}
+              </div>
+              {officeHourSlots.length === 0 && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">No office-hour slots available yet.</p>}
+              {viewerContext?.isInstructor && <div className="mt-5 rounded-2xl bg-slate-50 p-4"><h3 className="font-black text-gray-900">Booking requests</h3><div className="mt-3"><OfficeHourBookingPanel bookings={officeHourCourseBookings} professorView /></div></div>}
+            </div>
+
+            <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
               <h2 className="text-2xl font-black text-gray-900">Roster</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-2">
                 {enrolled.map((item) => (
@@ -296,7 +328,7 @@ const CourseDetailPage = () => {
             <div className="rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70">
               <h2 className="text-2xl font-black text-gray-900">Coming next</h2>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
-                <div className="rounded-2xl bg-blue-50 p-4 text-blue-700"><p className="font-black">Office hours</p><p className="text-sm">Book professor meeting slots.</p></div>
+                <div className="rounded-2xl bg-blue-50 p-4 text-blue-700"><p className="font-black">Office hour reminders</p><p className="text-sm">Automatic alerts before meetings.</p></div>
                 <div className="rounded-2xl bg-purple-50 p-4 text-purple-700"><p className="font-black">Announcement read receipts</p><p className="text-sm">Track who has seen updates.</p></div>
                 <div className="rounded-2xl bg-emerald-50 p-4 text-emerald-700"><p className="font-black">Result analytics</p><p className="text-sm">Charts, averages, and exports.</p></div>
               </div>
@@ -330,6 +362,7 @@ const CourseDetailPage = () => {
         </section>
       </div>
 
+      {showOfficeHourForm && <OfficeHourSlotFormModal courseId={id} onClose={() => setShowOfficeHourForm(false)} />}
       {showAttendanceForm && <AttendanceSessionFormModal courseId={id} onClose={() => setShowAttendanceForm(false)} />}
       {showQuestionForm && <CourseQuestionFormModal courseId={id} onClose={() => setShowQuestionForm(false)} />}
       {showAssessmentForm && <AssessmentFormModal courseId={id} onClose={() => setShowAssessmentForm(false)} />}

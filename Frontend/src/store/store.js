@@ -14,6 +14,7 @@ import assignmentsReducer from "../features/assignments/assignmentsSlice";
 import resultsReducer from "../features/results/resultsSlice";
 import courseQAReducer from "../features/courseQA/courseQASlice";
 import courseAttendanceReducer from "../features/courseAttendance/courseAttendanceSlice";
+import officeHoursReducer from "../features/officeHours/officeHoursSlice";
 
 
 const store = configureStore({
@@ -33,6 +34,7 @@ const store = configureStore({
     results: resultsReducer,
     courseQA: courseQAReducer,
     courseAttendance: courseAttendanceReducer,
+    officeHours: officeHoursReducer,
 
   },
 });

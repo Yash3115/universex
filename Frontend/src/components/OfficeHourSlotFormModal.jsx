@@ -1,0 +1,14 @@
+import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { toast } from "react-toastify";
+import { createOfficeHourSlot } from "../features/officeHours/officeHoursSlice";
+
+const OfficeHourSlotFormModal = ({ courseId, onClose }) => {
+  const dispatch = useDispatch();
+  const [form, setForm] = useState({ title: "", startAt: "", endAt: "", mode: "offline", location: "", meetingLink: "", capacity: 1, notes: "" });
+  const update = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const submit = async (event) => { event.preventDefault(); try { await dispatch(createOfficeHourSlot({ ...form, courseId })).unwrap(); toast.success("Office hour slot created"); onClose(); } catch (e) { toast.error(e || "Unable to create slot"); } };
+  return <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"><form className="w-full max-w-2xl rounded-3xl bg-white p-6 shadow-2xl" onSubmit={submit}><div className="flex justify-between"><h2 className="text-2xl font-black">Create office-hour slot</h2><button type="button" className="btn btn-sm" onClick={onClose}>✕</button></div><div className="mt-6 grid gap-4 md:grid-cols-2"><input className="input input-bordered rounded-2xl" value={form.title} onChange={(e) => update("title", e.target.value)} placeholder="Title" required /><input className="input input-bordered rounded-2xl" type="number" value={form.capacity} onChange={(e) => update("capacity", e.target.value)} placeholder="Capacity" /><input className="input input-bordered rounded-2xl" type="datetime-local" value={form.startAt} onChange={(e) => update("startAt", e.target.value)} required /><input className="input input-bordered rounded-2xl" type="datetime-local" value={form.endAt} onChange={(e) => update("endAt", e.target.value)} required /><select className="select select-bordered rounded-2xl" value={form.mode} onChange={(e) => update("mode", e.target.value)}><option value="offline">offline</option><option value="online">online</option><option value="hybrid">hybrid</option></select><input className="input input-bordered rounded-2xl" value={form.location} onChange={(e) => update("location", e.target.value)} placeholder="Location" /><input className="input input-bordered rounded-2xl md:col-span-2" value={form.meetingLink} onChange={(e) => update("meetingLink", e.target.value)} placeholder="Meeting link" /></div><textarea className="textarea textarea-bordered mt-4 w-full rounded-2xl" value={form.notes} onChange={(e) => update("notes", e.target.value)} placeholder="Notes" /><div className="mt-6 flex justify-end gap-3"><button type="button" className="btn" onClick={onClose}>Cancel</button><button className="btn btn-primary">Create</button></div></form></div>;
+};
+
+export default OfficeHourSlotFormModal;
