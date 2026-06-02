@@ -5,7 +5,16 @@ const dotenv = require("dotenv");
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
+const Assessment = require("../models/assessmentSchema");
+const Assignment = require("../models/assignmentSchema");
+const ChatMessage = require("../models/chatMessageSchema");
+const ChatThread = require("../models/chatThreadSchema");
+const Connection = require("../models/connectionSchema");
+const Course = require("../models/courseSchema");
+const CourseAnnouncement = require("../models/courseAnnouncementSchema");
+const CourseMaterial = require("../models/courseMaterialSchema");
 const FacultyProfile = require("../models/facultyProfileSchema");
+const GradeRecord = require("../models/gradeRecordSchema");
 const Job = require("../models/jobSchema");
 const Profile = require("../models/profileSchema");
 const User = require("../models/userSchema");
@@ -22,6 +31,8 @@ const daysFromNow = (days) => {
   date.setDate(date.getDate() + days);
   return date;
 };
+
+const buildPairKey = (firstUserId, secondUserId) => [String(firstUserId), String(secondUserId)].sort().join(":");
 
 const dummyUsers = [
   {
@@ -69,6 +80,62 @@ const dummyUsers = [
       bio: "Mentors capstone teams and coordinates industry-backed AI projects.",
       researchAreas: ["Responsible AI", "Learning analytics", "Human-centered computing"],
       website: "https://universex.demo/faculty/ananya-rao",
+    },
+  },
+  {
+    firstName: "Dr. Kabir",
+    lastName: "Menon",
+    email: "prof.kabir@universex.demo",
+    role: "Professor",
+    college: "UniverseX Institute of Technology",
+    gender: "Male",
+    dateOfBirth: "1982-04-08",
+    balance: 50000,
+    profile: {
+      about: "Professor of AI and data systems leading hands-on labs and research sprints.",
+      contactNumber: 9000000011,
+      department: "Computer Science Engineering",
+      graduationYear: 2006,
+      skills: ["Deep Learning", "Data Engineering", "Academic Mentoring"],
+      interests: ["Applied ML", "MLOps", "Student startups"],
+      visibility: "public",
+    },
+    facultyProfile: {
+      employeeId: "UX-FAC-102",
+      designation: "Professor",
+      department: "Computer Science Engineering",
+      officeLocation: "Block C, Room 212",
+      bio: "Runs the Applied ML studio and helps students publish practical AI projects.",
+      researchAreas: ["Deep learning", "MLOps", "Information retrieval"],
+      website: "https://universex.demo/faculty/kabir-menon",
+    },
+  },
+  {
+    firstName: "Dr. Nisha",
+    lastName: "Sen",
+    email: "prof.nisha@universex.demo",
+    role: "Professor",
+    college: "UniverseX Institute of Technology",
+    gender: "Female",
+    dateOfBirth: "1985-09-19",
+    balance: 50000,
+    profile: {
+      about: "Electronics professor coordinating embedded systems labs and robotics projects.",
+      contactNumber: 9000000012,
+      department: "Electronics and Communication Engineering",
+      graduationYear: 2008,
+      skills: ["Embedded Systems", "IoT", "Robotics"],
+      interests: ["Hardware labs", "Robotics club", "Industry projects"],
+      visibility: "public",
+    },
+    facultyProfile: {
+      employeeId: "UX-FAC-103",
+      designation: "Assistant Professor",
+      department: "Electronics and Communication Engineering",
+      officeLocation: "Electronics Lab, Room 118",
+      bio: "Guides hardware prototypes and lab-based course projects.",
+      researchAreas: ["Embedded AI", "Sensor networks", "Robotics education"],
+      website: "https://universex.demo/faculty/nisha-sen",
     },
   },
   {
@@ -292,6 +359,218 @@ const dummyJobs = [
   },
 ];
 
+const dummyCourses = [
+  {
+    professorEmail: "professor@universex.demo",
+    title: "Data Structures and Algorithms",
+    code: "CS301",
+    description: "Core problem-solving course covering arrays, trees, graphs, dynamic programming, and interview-style implementation practice.",
+    college: "UniverseX Institute of Technology",
+    department: "Computer Science Engineering",
+    semester: "5",
+    academicYear: "2026-2027",
+    section: "A",
+    enrollmentPolicy: "open",
+    joinCode: "CS301A",
+    studentEmails: ["student@universex.demo", "rohan@universex.demo"],
+  },
+  {
+    professorEmail: "prof.kabir@universex.demo",
+    title: "Applied Machine Learning",
+    code: "CS451",
+    description: "Project-based machine learning course with datasets, model evaluation, deployment basics, and responsible AI discussions.",
+    college: "UniverseX Institute of Technology",
+    department: "Computer Science Engineering",
+    semester: "7",
+    academicYear: "2026-2027",
+    section: "ML",
+    enrollmentPolicy: "open",
+    joinCode: "CS451M",
+    studentEmails: ["student@universex.demo", "meera@universex.demo", "rohan@universex.demo"],
+  },
+  {
+    professorEmail: "prof.nisha@universex.demo",
+    title: "Embedded Systems Lab",
+    code: "EC210",
+    description: "Hands-on lab course for microcontrollers, sensor integration, timers, interrupts, and IoT prototype workflows.",
+    college: "UniverseX Institute of Technology",
+    department: "Electronics and Communication Engineering",
+    semester: "4",
+    academicYear: "2026-2027",
+    section: "LAB1",
+    enrollmentPolicy: "open",
+    joinCode: "EC210L",
+    studentEmails: ["sara@universex.demo"],
+  },
+];
+
+const dummyMaterials = [
+  {
+    courseCode: "CS301",
+    title: "Week 1: Complexity and Arrays Notes",
+    description: "Starter notes covering Big-O, memory tradeoffs, arrays, two pointers, and sliding window patterns.",
+    type: "notes",
+    externalUrl: "https://universex.demo/materials/cs301/week-1-complexity-arrays.pdf",
+    tags: ["complexity", "arrays", "practice"],
+    pinned: true,
+  },
+  {
+    courseCode: "CS301",
+    title: "Graph Traversal Practice Set",
+    description: "Professor-curated BFS and DFS questions for lab and interview preparation.",
+    type: "assignment-brief",
+    externalUrl: "https://universex.demo/materials/cs301/graph-traversal-practice.pdf",
+    tags: ["graphs", "bfs", "dfs"],
+  },
+  {
+    courseCode: "CS451",
+    title: "ML Project Dataset Brief",
+    description: "Dataset selection guide, baseline requirements, evaluation metrics, and submission rubric.",
+    type: "reference",
+    externalUrl: "https://universex.demo/materials/cs451/project-dataset-brief.pdf",
+    tags: ["project", "datasets", "rubric"],
+    pinned: true,
+  },
+  {
+    courseCode: "CS451",
+    title: "Model Evaluation Lab Notebook",
+    description: "Notebook walkthrough for train-test split, cross validation, confusion matrices, and model cards.",
+    type: "lab",
+    externalUrl: "https://universex.demo/materials/cs451/model-evaluation-lab.ipynb",
+    tags: ["lab", "evaluation", "notebook"],
+  },
+  {
+    courseCode: "EC210",
+    title: "Microcontroller Pin Mapping Sheet",
+    description: "Reference sheet for lab boards, GPIO pins, serial communication, and safe wiring.",
+    type: "lab",
+    externalUrl: "https://universex.demo/materials/ec210/pin-mapping-sheet.pdf",
+    tags: ["microcontroller", "gpio", "lab"],
+    pinned: true,
+  },
+];
+
+const dummyAnnouncements = [
+  {
+    courseCode: "CS301",
+    title: "Graph lab moved to Friday",
+    body: "This week's graph traversal lab will happen on Friday in Lab 2. Bring your laptop and complete the warm-up problems before class.",
+    priority: "important",
+    pinned: true,
+  },
+  {
+    courseCode: "CS451",
+    title: "Project proposal deadline",
+    body: "Submit your ML project proposal with dataset link, problem statement, and evaluation metric by Sunday night.",
+    priority: "urgent",
+    pinned: true,
+  },
+  {
+    courseCode: "EC210",
+    title: "Hardware kits issued",
+    body: "Embedded lab kits are issued from the electronics lab. Check your kit components before the next practical session.",
+    priority: "normal",
+    pinned: false,
+  },
+];
+
+const dummyAssignments = [
+  {
+    courseCode: "CS301",
+    title: "Dynamic Programming Drill",
+    description: "Solve five DP problems and submit explanations for state, transition, and complexity.",
+    dueOffsetDays: 9,
+    totalMarks: 50,
+  },
+  {
+    courseCode: "CS451",
+    title: "Baseline Model Report",
+    description: "Train a baseline model, document assumptions, and submit a short report with error analysis.",
+    dueOffsetDays: 12,
+    totalMarks: 40,
+  },
+  {
+    courseCode: "EC210",
+    title: "Sensor Logger Demo",
+    description: "Build a temperature logger and submit code, circuit photo, and observations.",
+    dueOffsetDays: 7,
+    totalMarks: 30,
+  },
+];
+
+const dummyAssessments = [
+  {
+    courseCode: "CS301",
+    title: "Mid Semester Exam",
+    type: "MidSem",
+    maxMarks: 60,
+    weightage: 25,
+    description: "Published mid-semester result for algorithms and data structures.",
+    grades: [
+      { studentEmail: "student@universex.demo", marks: 52, grade: "A", feedback: "Strong graph answers. Revisit DP edge cases." },
+      { studentEmail: "rohan@universex.demo", marks: 49, grade: "A-", feedback: "Good implementation detail. Add clearer complexity notes." },
+    ],
+  },
+  {
+    courseCode: "CS451",
+    title: "Model Evaluation Quiz",
+    type: "Quiz",
+    maxMarks: 30,
+    weightage: 10,
+    description: "Published quiz result for metrics, validation, and model interpretation.",
+    grades: [
+      { studentEmail: "student@universex.demo", marks: 26, grade: "A", feedback: "Excellent metric selection reasoning." },
+      { studentEmail: "meera@universex.demo", marks: 28, grade: "A+", feedback: "Very strong evaluation and error analysis." },
+      { studentEmail: "rohan@universex.demo", marks: 24, grade: "B+", feedback: "Good score. Review calibration examples." },
+    ],
+  },
+  {
+    courseCode: "EC210",
+    title: "Lab Practical 1",
+    type: "Lab",
+    maxMarks: 25,
+    weightage: 15,
+    description: "Published first lab practical result for GPIO and serial communication.",
+    grades: [
+      { studentEmail: "sara@universex.demo", marks: 23, grade: "A", feedback: "Clean wiring and well-commented code." },
+    ],
+  },
+];
+
+const dummyConnections = [
+  { requesterEmail: "student@universex.demo", recipientEmail: "rohan@universex.demo" },
+  { requesterEmail: "student@universex.demo", recipientEmail: "meera@universex.demo" },
+  { requesterEmail: "sara@universex.demo", recipientEmail: "student@universex.demo" },
+];
+
+const dummyChats = [
+  {
+    type: "department",
+    department: "Computer Science Engineering",
+    messages: [
+      { senderEmail: "student@universex.demo", content: "Has anyone started the ML baseline report yet?" },
+      { senderEmail: "rohan@universex.demo", content: "Yes, I shared a notebook outline after today's lab." },
+      { senderEmail: "meera@universex.demo", content: "I can add an evaluation checklist for everyone." },
+    ],
+  },
+  {
+    type: "direct",
+    participantEmails: ["student@universex.demo", "rohan@universex.demo"],
+    messages: [
+      { senderEmail: "rohan@universex.demo", content: "Want to pair on the DP drill after class?" },
+      { senderEmail: "student@universex.demo", content: "Yes, let's use the graph lab room after 4 PM." },
+    ],
+  },
+  {
+    type: "direct",
+    participantEmails: ["student@universex.demo", "meera@universex.demo"],
+    messages: [
+      { senderEmail: "meera@universex.demo", content: "I found a clean dataset for the ML project." },
+      { senderEmail: "student@universex.demo", content: "Great, send it here and I will review the baseline." },
+    ],
+  },
+];
+
 const connectDatabase = async () => {
   if (!process.env.MONGODB_URL) {
     throw new Error("MONGODB_URL is not configured. Add it to Backend/.env first.");
@@ -331,6 +610,10 @@ const upsertDummyUser = async (userData, hashedPassword, adminUserId) => {
     additionalDetails: profileId,
     role: userData.role,
     active: true,
+    verificationStatus: "verified",
+    mustChangePassword: false,
+    profileCompletionRequired: false,
+    temporaryPasswordLastSetAt: null,
     balance: userData.balance,
     image: {
       ...DEFAULT_IMAGE,
@@ -391,6 +674,266 @@ const seedDummyJobs = async (usersByEmail) => {
   return jobs;
 };
 
+const seedDummyCourses = async (usersByEmail) => {
+  const coursesByCode = new Map();
+
+  for (const courseData of dummyCourses) {
+    const professor = usersByEmail.get(courseData.professorEmail);
+    if (!professor) continue;
+
+    const enrollments = courseData.studentEmails
+      .map((email) => usersByEmail.get(email))
+      .filter(Boolean)
+      .map((student) => ({
+        student: student._id,
+        status: "enrolled",
+        joinedAt: daysFromNow(-14),
+      }));
+
+    const { professorEmail, studentEmails, ...coursePayload } = courseData;
+    const course = await Course.findOneAndUpdate(
+      {
+        code: coursePayload.code,
+        college: coursePayload.college,
+        section: coursePayload.section,
+        academicYear: coursePayload.academicYear,
+      },
+      {
+        ...coursePayload,
+        code: coursePayload.code.toUpperCase(),
+        professor: professor._id,
+        enrollments,
+        status: "active",
+      },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+
+    coursesByCode.set(course.code, course);
+  }
+
+  return coursesByCode;
+};
+
+const seedDummyMaterials = async (coursesByCode) => {
+  const materials = [];
+
+  for (const materialData of dummyMaterials) {
+    const course = coursesByCode.get(materialData.courseCode);
+    if (!course) continue;
+
+    const { courseCode, ...materialPayload } = materialData;
+    const material = await CourseMaterial.findOneAndUpdate(
+      { course: course._id, title: materialPayload.title },
+      {
+        ...materialPayload,
+        course: course._id,
+        uploadedBy: course.professor,
+        visibility: "enrolled",
+        publishedAt: daysFromNow(-3),
+      },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+
+    materials.push(material);
+  }
+
+  return materials;
+};
+
+const seedDummyAnnouncements = async (coursesByCode) => {
+  const announcements = [];
+
+  for (const announcementData of dummyAnnouncements) {
+    const course = coursesByCode.get(announcementData.courseCode);
+    if (!course) continue;
+
+    const { courseCode, ...announcementPayload } = announcementData;
+    const announcement = await CourseAnnouncement.findOneAndUpdate(
+      { course: course._id, title: announcementPayload.title },
+      {
+        ...announcementPayload,
+        course: course._id,
+        author: course.professor,
+        visibility: "enrolled",
+        publishedAt: daysFromNow(-2),
+      },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+
+    announcements.push(announcement);
+  }
+
+  return announcements;
+};
+
+const seedDummyAssignments = async (coursesByCode) => {
+  const assignments = [];
+
+  for (const assignmentData of dummyAssignments) {
+    const course = coursesByCode.get(assignmentData.courseCode);
+    if (!course) continue;
+
+    const { courseCode, dueOffsetDays, ...assignmentPayload } = assignmentData;
+    const assignment = await Assignment.findOneAndUpdate(
+      { course: course._id, title: assignmentPayload.title },
+      {
+        ...assignmentPayload,
+        course: course._id,
+        professor: course.professor,
+        dueDate: daysFromNow(dueOffsetDays),
+        status: "published",
+        visibility: "enrolled",
+        publishedAt: daysFromNow(-1),
+      },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+
+    assignments.push(assignment);
+  }
+
+  return assignments;
+};
+
+const seedDummyResults = async (coursesByCode, usersByEmail) => {
+  const assessments = [];
+  const gradeRecords = [];
+
+  for (const assessmentData of dummyAssessments) {
+    const course = coursesByCode.get(assessmentData.courseCode);
+    if (!course) continue;
+
+    const { courseCode, grades, ...assessmentPayload } = assessmentData;
+    const publishedAt = daysFromNow(-1);
+    const assessment = await Assessment.findOneAndUpdate(
+      { course: course._id, title: assessmentPayload.title },
+      {
+        ...assessmentPayload,
+        course: course._id,
+        professor: course.professor,
+        status: "published",
+        visibleFrom: daysFromNow(-1),
+        publishedAt,
+      },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+    assessments.push(assessment);
+
+    for (const gradeData of grades) {
+      const student = usersByEmail.get(gradeData.studentEmail);
+      if (!student) continue;
+
+      const { studentEmail, ...gradePayload } = gradeData;
+      const gradeRecord = await GradeRecord.findOneAndUpdate(
+        { assessment: assessment._id, student: student._id },
+        {
+          ...gradePayload,
+          assessment: assessment._id,
+          course: course._id,
+          student: student._id,
+          publishedAt,
+        },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+
+      gradeRecords.push(gradeRecord);
+    }
+  }
+
+  return { assessments, gradeRecords };
+};
+
+const seedDummyConnections = async (usersByEmail) => {
+  const connections = [];
+
+  for (const connectionData of dummyConnections) {
+    const requester = usersByEmail.get(connectionData.requesterEmail);
+    const recipient = usersByEmail.get(connectionData.recipientEmail);
+    if (!requester || !recipient) continue;
+
+    const connection = await Connection.findOneAndUpdate(
+      { pairKey: buildPairKey(requester._id, recipient._id) },
+      {
+        requester: requester._id,
+        recipient: recipient._id,
+        pairKey: buildPairKey(requester._id, recipient._id),
+        status: "accepted",
+        acceptedAt: daysFromNow(-5),
+      },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+    );
+
+    connections.push(connection);
+  }
+
+  return connections;
+};
+
+const seedDummyChats = async (usersByEmail) => {
+  const threads = [];
+  const messages = [];
+
+  for (const chatData of dummyChats) {
+    let thread;
+
+    if (chatData.type === "department") {
+      thread = await ChatThread.findOneAndUpdate(
+        { type: "department", department: chatData.department },
+        {
+          type: "department",
+          department: chatData.department,
+          participants: [],
+        },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+    } else {
+      const participants = chatData.participantEmails
+        .map((email) => usersByEmail.get(email))
+        .filter(Boolean);
+      if (participants.length !== 2) continue;
+
+      const pairKey = buildPairKey(participants[0]._id, participants[1]._id);
+      thread = await ChatThread.findOneAndUpdate(
+        { type: "direct", pairKey },
+        {
+          type: "direct",
+          pairKey,
+          participants: participants.map((participant) => participant._id),
+        },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+    }
+
+    threads.push(thread);
+
+    for (const messageData of chatData.messages) {
+      const sender = usersByEmail.get(messageData.senderEmail);
+      if (!sender) continue;
+
+      const message = await ChatMessage.findOneAndUpdate(
+        {
+          thread: thread._id,
+          sender: sender._id,
+          content: messageData.content,
+        },
+        {
+          thread: thread._id,
+          sender: sender._id,
+          content: messageData.content,
+        },
+        { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+
+      messages.push(message);
+      thread.lastMessage = message.content;
+      thread.lastMessageAt = message.createdAt || new Date();
+    }
+
+    await thread.save();
+  }
+
+  return { threads, messages };
+};
+
 const seedDummyUsers = async () => {
   await connectDatabase();
   const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
@@ -414,11 +957,46 @@ const seedDummyUsers = async () => {
     console.log(`OK Job       ${job.title}`);
   }
 
+  console.log("\nSeeding UniverseX dummy courses and academics...\n");
+  const coursesByCode = await seedDummyCourses(usersByEmail);
+  for (const course of coursesByCode.values()) {
+    console.log(`OK Course    ${course.code} - ${course.title}`);
+  }
+
+  const materials = await seedDummyMaterials(coursesByCode);
+  for (const material of materials) {
+    console.log(`OK Material  ${material.title}`);
+  }
+
+  const announcements = await seedDummyAnnouncements(coursesByCode);
+  for (const announcement of announcements) {
+    console.log(`OK Notice    ${announcement.title}`);
+  }
+
+  const assignments = await seedDummyAssignments(coursesByCode);
+  for (const assignment of assignments) {
+    console.log(`OK Task      ${assignment.title}`);
+  }
+
+  const { assessments, gradeRecords } = await seedDummyResults(coursesByCode, usersByEmail);
+  for (const assessment of assessments) {
+    console.log(`OK Result    ${assessment.title}`);
+  }
+  console.log(`OK Grades    ${gradeRecords.length} published grade records`);
+
+  console.log("\nSeeding UniverseX dummy chats...\n");
+  const connections = await seedDummyConnections(usersByEmail);
+  console.log(`OK Network   ${connections.length} accepted connections`);
+
+  const { threads, messages } = await seedDummyChats(usersByEmail);
+  console.log(`OK Chats     ${threads.length} threads and ${messages.length} messages`);
+
   console.log("\nDemo credentials:");
   for (const userData of dummyUsers) {
     console.log(`- ${userData.role.padEnd(9)} ${userData.email} / ${DEFAULT_PASSWORD}`);
   }
-  console.log("\nYou can rerun this command anytime; it updates the same demo users and jobs.\n");
+  console.log(`\nProfessor credential to try: prof.kabir@universex.demo / ${DEFAULT_PASSWORD}`);
+  console.log("\nYou can rerun this command anytime; it updates the same demo users, jobs, courses, materials, assignments, results, and chats.\n");
 };
 
 seedDummyUsers()

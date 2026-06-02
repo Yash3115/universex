@@ -27,15 +27,22 @@ const ChatPage = () => {
     [selectedThreadId, threads]
   );
   const messages = selectedThreadId ? messagesByThreadId[selectedThreadId] || [] : [];
+  const groupThreads = useMemo(
+    () => threads.filter((thread) => thread.type !== "direct"),
+    [threads]
+  );
+  const directThreads = useMemo(
+    () => threads.filter((thread) => thread.type === "direct"),
+    [threads]
+  );
   const existingDirectParticipantIds = useMemo(
     () =>
       new Set(
-        threads
-          .filter((thread) => thread.type === "direct")
+        directThreads
           .map((thread) => thread.otherParticipant?._id)
           .filter(Boolean)
       ),
-    [threads]
+    [directThreads]
   );
   const unstartedConnections = connections.filter((connection) => !existingDirectParticipantIds.has(connection._id));
 
@@ -111,8 +118,46 @@ const ChatPage = () => {
                 <h2 className="text-lg font-black text-gray-900">Chats</h2>
                 {status === "loading" && <span className="loading loading-spinner loading-sm text-blue-600" />}
               </div>
-              <div className="mt-4 space-y-2">
-                {threads.map((thread) => (
+              <div className="mt-4 space-y-5">
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase tracking-wide text-gray-500">Groups</h3>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-gray-500">{groupThreads.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {groupThreads.map((thread) => (
+                      <button
+                        key={thread._id}
+                        type="button"
+                        className={`flex w-full items-center gap-3 rounded-xl p-3 text-left transition ${
+                          selectedThreadId === thread._id ? "bg-blue-600 text-white" : "bg-slate-50 text-gray-700 hover:bg-blue-50"
+                        }`}
+                        onClick={() => dispatch(selectChatThread(thread._id))}
+                      >
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full ${selectedThreadId === thread._id ? "bg-white/20" : "bg-blue-100"}`}>
+                          <span className="text-sm font-black">{thread.department?.slice(0, 2).toUpperCase() || "DP"}</span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-black">{thread.title}</p>
+                          <p className={`truncate text-xs ${selectedThreadId === thread._id ? "text-blue-100" : "text-gray-500"}`}>
+                            {thread.lastMessage || "Department group"}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                    {status === "succeeded" && groupThreads.length === 0 && (
+                      <p className="rounded-xl bg-slate-50 p-4 text-sm text-gray-500">No groups yet. Add your department in profile to unlock one.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase tracking-wide text-gray-500">Direct messages</h3>
+                    <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-gray-500">{directThreads.length}</span>
+                  </div>
+                  <div className="space-y-2">
+                    {directThreads.map((thread) => (
                   <button
                     key={thread._id}
                     type="button"
@@ -122,23 +167,21 @@ const ChatPage = () => {
                     onClick={() => dispatch(selectChatThread(thread._id))}
                   >
                     <div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full ${selectedThreadId === thread._id ? "bg-white/20" : "bg-blue-100"}`}>
-                      {thread.type === "direct" ? (
-                        <img src={getImageUrl(thread.otherParticipant?.image, "https://cdn-icons-png.flaticon.com/512/6596/6596121.png")} alt="" className="h-full w-full object-cover" />
-                      ) : (
-                        <span className="text-sm font-black">{thread.department?.slice(0, 2).toUpperCase() || "DP"}</span>
-                      )}
+                      <img src={getImageUrl(thread.otherParticipant?.image, "https://cdn-icons-png.flaticon.com/512/6596/6596121.png")} alt="" className="h-full w-full object-cover" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-black">{thread.title}</p>
                       <p className={`truncate text-xs ${selectedThreadId === thread._id ? "text-blue-100" : "text-gray-500"}`}>
-                        {thread.lastMessage || (thread.type === "department" ? "Department group" : "Direct chat")}
+                        {thread.lastMessage || "Direct chat"}
                       </p>
                     </div>
                   </button>
-                ))}
-                {status === "succeeded" && threads.length === 0 && (
-                  <p className="rounded-xl bg-slate-50 p-4 text-sm text-gray-500">No chats yet.</p>
-                )}
+                    ))}
+                    {status === "succeeded" && directThreads.length === 0 && (
+                      <p className="rounded-xl bg-slate-50 p-4 text-sm text-gray-500">No direct messages yet. Start one from a connected student below.</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
