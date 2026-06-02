@@ -16,6 +16,8 @@ const buildPairKey = (firstUserId, secondUserId) => [String(firstUserId), String
 
 const normalizeDepartment = (department) => String(department || "").trim();
 
+const normalizeId = (value) => String(value?._id || value?.id || value || "");
+
 const getViewerWithProfile = (viewerId) =>
   User.findById(viewerId).select(USER_SELECT).populate("additionalDetails", "department");
 
@@ -43,6 +45,18 @@ const serializeThread = (thread, viewerId) => {
       ? `${data.department} Department`
       : `${otherParticipant?.firstName || "Student"} ${otherParticipant?.lastName || ""}`.trim(),
     otherParticipant,
+  };
+};
+
+const serializeMessage = (message, viewerId) => {
+  const data = message.toObject ? message.toObject() : message;
+  const senderId = normalizeId(data.sender);
+  const viewerIdString = normalizeId(viewerId);
+
+  return {
+    ...data,
+    senderId,
+    isOwn: Boolean(senderId && viewerIdString && senderId === viewerIdString),
   };
 };
 
@@ -172,7 +186,7 @@ exports.getMessages = async (req, res) => {
     return res.status(200).json({
       success: true,
       thread: serializeThread(thread, req.user.id),
-      messages,
+      messages: messages.map((message) => serializeMessage(message, req.user.id)),
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Failed to load messages", error: error.message });
@@ -210,7 +224,7 @@ exports.sendMessage = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message,
+      message: serializeMessage(message, req.user.id),
       thread: serializeThread(thread, req.user.id),
     });
   } catch (error) {

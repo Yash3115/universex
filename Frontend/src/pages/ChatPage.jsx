@@ -26,6 +26,17 @@ const formatThreadTime = (date) => {
 const getSenderName = (sender) =>
   `${sender?.firstName || "Student"} ${sender?.lastName || ""}`.trim();
 
+const normalizeId = (value) => String(value?._id || value?.id || value || "");
+
+const isOwnMessage = (message, user) => {
+  if (message.isOwn === true) return true;
+  if (message.isOwn === false) return false;
+
+  const senderId = normalizeId(message.senderId || message.sender);
+  const userId = normalizeId(user);
+  return Boolean(senderId && userId && senderId === userId);
+};
+
 const getThreadSearchText = (thread) =>
   [
     thread.title,
@@ -357,7 +368,7 @@ const ChatPage = () => {
 
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-4 sm:px-5">
                 {messages.map((message) => {
-                  const isMine = String(message.sender?._id || message.sender) === String(user?._id);
+                  const isMine = isOwnMessage(message, user);
                   return (
                     <div
                       key={message._id}
