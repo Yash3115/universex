@@ -1,5 +1,6 @@
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { getImageUrl } from "../utils/imageUtils";
 
 function CommunitySideBar() {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ function CommunitySideBar() {
       {user ? (
         <div className="hidden md:flex flex-col items-center text-center">
           <img
-            src={user?.image || "/default-profile.png"}
+            src={getImageUrl(user?.image, "/default-profile.png")}
             alt="Profile"
             className="h-24 w-24 rounded-full border-4 border-blue-100 object-cover shadow-lg"
           />

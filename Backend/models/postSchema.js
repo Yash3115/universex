@@ -1,11 +1,22 @@
 const mongoose = require("mongoose");
 const Comment = require("./commentSchema"); // Import Comment model
 
+const imageSchema = new mongoose.Schema(
+    {
+        url: { type: String, default: "" },
+        publicId: { type: String, default: "" },
+        width: { type: Number },
+        height: { type: Number },
+        format: { type: String, default: "" },
+    },
+    { _id: false }
+);
+
 const postSchema = new mongoose.Schema(
     {
         user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         content: { type: String, required: true },
-        image: { type: String }, // Optional image for the post
+        image: { type: mongoose.Schema.Types.Mixed, default: null }, // string legacy URL or image metadata object
         college: { type: String, required: true }, // To filter posts by college
         category: {
             type: String,

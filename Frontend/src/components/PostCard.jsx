@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { deletePost } from "../features/posts/postsSlice";
 import { toast } from "react-toastify";
 import ConfirmDialog from "./ConfirmDialog";
+import { getImageUrl } from "../utils/imageUtils";
 
 const PostCard = ({ post, allowUpdate = false }) => {
   const user = useSelector((state) => state.auth.user);
@@ -97,8 +98,7 @@ const PostCard = ({ post, allowUpdate = false }) => {
       <div className="flex items-center">
         <img
           src={
-            post?.user?.image ||
-            "https://cdn-icons-png.flaticon.com/512/6596/6596121.png"
+            getImageUrl(post?.user?.image, "https://cdn-icons-png.flaticon.com/512/6596/6596121.png")
           }
           alt="Profile Pic"
           className="w-12 h-12 rounded-full object-cover border border-gray-300"
@@ -120,13 +120,13 @@ const PostCard = ({ post, allowUpdate = false }) => {
           {post?.tags?.map((tag) => <span key={tag} className="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600">#{tag}</span>)}
         </div>
 
-        {post?.image && (
+        {getImageUrl(post?.image) && (
           <div className="relative flex justify-center">
             {/* Blurred Background */}
             <div
               className="absolute inset-0 bg-cover bg-center blur-sm rounded-lg"
               style={{
-                backgroundImage: `url(${post.image})`,
+                backgroundImage: `url(${getImageUrl(post.image)})`,
                 filter: "blur(5px)",
                 opacity: 0.5,
               }}
@@ -134,7 +134,7 @@ const PostCard = ({ post, allowUpdate = false }) => {
 
             {/* Main Image */}
             <img
-              src={post.image}
+              src={getImageUrl(post.image)}
               alt="Post Content"
               className="relative w-full max-w-lg h-auto max-h-80 object-contain"
             />

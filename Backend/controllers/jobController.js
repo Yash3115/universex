@@ -79,13 +79,23 @@ const sanitizeJobPayload = (payload, { partial = false } = {}) => {
   return { data: sanitized };
 };
 
+const canPublishJob = (user) => ["Admin", "Professor"].includes(user?.role);
+
 const canManageJob = (job, user) =>
-  user?.role === "Admin" || job.postedBy.toString() === user?._id?.toString();
+  user?.role === "Admin" ||
+  (user?.role === "Professor" && job.postedBy.toString() === user?._id?.toString());
 
 const populateJob = (query) => query.populate("postedBy", "firstName lastName email image role");
 
 exports.createJob = async (req, res) => {
   try {
+    if (!canPublishJob(req.user)) {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins and professors can post opportunities",
+      });
+    }
+
     const { data, error } = sanitizeJobPayload(req.body);
     if (error) {
       return res.status(400).json({ success: false, message: error });

@@ -28,6 +28,7 @@ const StudentProfilePage = () => {
   const dispatch = useDispatch();
   const [interactionType, setInteractionType] = useState(null);
   const { selectedStudentProfile, selectedStudentProfileError, selectedStudentProfileStatus, actionLoadingByStudentId } = useSelector((state) => state.discovery);
+  const currentUser = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     if (id) dispatch(fetchStudentProfile(id));
@@ -64,6 +65,7 @@ const StudentProfilePage = () => {
 
   const renderConnectionAction = () => {
     if (access.isSelf) return <button className="btn rounded-2xl" onClick={() => navigate("/profile")}>Open my profile</button>;
+    if (currentUser && currentUser.role !== "Student") return <button className="btn rounded-2xl" disabled>Student connections only</button>;
     if (connectionState.direction === "connected") return <button className="btn rounded-2xl bg-emerald-50 text-emerald-700" onClick={() => navigate("/connections")}>Connected · Manage</button>;
     if (connectionState.direction === "incoming" && connectionState.status === "pending") {
       return (

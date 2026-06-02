@@ -1,7 +1,7 @@
 const Post = require("../models/postSchema");
 const User = require("../models/userSchema");
 const Comment = require("../models/commentSchema");
-const {uploadImageToCloudinary} = require("../utils/imageUploader");
+const { deleteImageFromCloudinary, uploadImageToCloudinary } = require("../utils/imageUploader");
 const { createNotification } = require("../utils/notificationService");
 
 const POST_CATEGORIES = ["General", "Academics", "Placements", "Events", "Lost & Found", "Help", "Announcements"];
@@ -29,21 +29,20 @@ exports.createPost = async (req, res) => {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
-        let imageUrl = "";
+        let image = null;
         if (req.files?.displayPicture) {
-            const uploadedImage = await uploadImageToCloudinary(
+            image = await uploadImageToCloudinary(
                 req.files.displayPicture,
                 process.env.FOLDER_NAME || "posts",
                 1000,
                 1000
             );
-            imageUrl = uploadedImage.secure_url;
         }
 
         const post = new Post({
             user: userId,
             content,
-            image: imageUrl,
+            image,
             college: user.college,
             category,
             tags,
@@ -149,6 +148,7 @@ exports.deletePost = async (req, res) => {
             return res.status(403).json({ success: false, message: "Unauthorized to delete this post" });
         }
 
+        await deleteImageFromCloudinary(post.image);
         await Comment.deleteMany({ post: post._id }); // Delete associated comments
         await post.deleteOne();
 
@@ -199,6 +199,7 @@ exports.likePost = async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 };
+
 
 
 

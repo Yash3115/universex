@@ -30,6 +30,7 @@ const JobsPage = () => {
     () => jobs.filter((job) => job.status === "open" && new Date(job.lastDateToApply).getTime() >= Date.now()).length,
     [jobs]
   );
+  const canPostJobs = user?.role === "Admin" || user?.role === "Professor";
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -37,6 +38,11 @@ const JobsPage = () => {
   };
 
   const handleOpenCreate = () => {
+    if (!canPostJobs) {
+      toast.info("Only admins and professors can post opportunities.");
+      return;
+    }
+
     setEditingJob(null);
     setIsModalOpen(true);
   };
@@ -48,6 +54,10 @@ const JobsPage = () => {
         await dispatch(updateJob({ jobId: editingJob._id, jobData: payload })).unwrap();
         toast.success("Opportunity updated successfully");
       } else {
+        if (!canPostJobs) {
+          toast.info("Only admins and professors can post opportunities.");
+          return;
+        }
         await dispatch(createJob(payload)).unwrap();
         toast.success("Opportunity posted successfully");
       }
@@ -77,7 +87,8 @@ const JobsPage = () => {
   };
 
   const canManage = (job) =>
-    user?.role === "Admin" || String(job.postedBy?._id) === String(user?._id);
+    user?.role === "Admin" ||
+    (user?.role === "Professor" && String(job.postedBy?._id) === String(user?._id));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8">
@@ -145,7 +156,9 @@ const JobsPage = () => {
             </select>
             <div className="flex flex-col gap-2 sm:flex-row">
               <button className="btn btn-ghost rounded-2xl" onClick={() => dispatch(resetJobFilters())}>Reset</button>
-              <button className="btn btn-primary rounded-2xl" onClick={handleOpenCreate}>+ Post opportunity</button>
+              {canPostJobs && (
+                <button className="btn btn-primary rounded-2xl" onClick={handleOpenCreate}>+ Post opportunity</button>
+              )}
             </div>
           </div>
         </div>
@@ -156,7 +169,7 @@ const JobsPage = () => {
         {status !== "loading" && jobs.length === 0 && (
           <div className="rounded-3xl bg-white p-10 text-center shadow-xl shadow-slate-200/70">
             <h2 className="text-2xl font-black text-gray-800">No opportunities found</h2>
-            <p className="text-gray-500 mt-2">Try changing filters or post the first opportunity for your campus.</p>
+            <p className="text-gray-500 mt-2">Try changing filters or check back when your campus team posts a new opportunity.</p>
           </div>
         )}
 

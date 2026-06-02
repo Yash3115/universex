@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { FaPaperPlane, FaHeart, FaReply, FaEllipsisH } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import api from "../services/api";
+import { getImageUrl } from "../utils/imageUtils";
 
 const CommentBox = ({ postId }) => {
   const user = useSelector((state) => state.auth.user);
@@ -46,7 +47,7 @@ const CommentBox = ({ postId }) => {
     <div className="bg-white p-4 rounded-lg border my-2 border-gray-300">
       {/* Comment Input Box */}
       <div className="flex items-center gap-3 border rounded-full px-3 py-2 mb-4">
-        <img src={user?.image || "https://cdn-icons-png.flaticon.com/512/6596/6596121.png"} alt="User" className="w-10 h-10 rounded-full" />
+        <img src={getImageUrl(user?.image, "https://cdn-icons-png.flaticon.com/512/6596/6596121.png")} alt="User" className="w-10 h-10 rounded-full" />
         <input
           type="text"
           placeholder="Add a comment..."
@@ -80,7 +81,7 @@ const CommentBox = ({ postId }) => {
 const CommentItem = ({ comment }) => {
   return (
     <div className="flex gap-3 border-b pb-3">
-      <img src={comment.user.image} alt="User" className="w-10 h-10 rounded-full" />
+      <img src={getImageUrl(comment.user.image, "https://cdn-icons-png.flaticon.com/512/6596/6596121.png")} alt="User" className="w-10 h-10 rounded-full" />
       <div className="flex-1">
         <p className="text-sm font-semibold">
           {comment.user.firstName} 

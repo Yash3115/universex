@@ -2,10 +2,13 @@ import { useEffect } from "react";
 import { fetchPosts } from "../features/posts/postsSlice";
 import { FaInstagram, FaLinkedin, FaPhone } from "react-icons/fa";
 import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import PostCard from "../components/PostCard";
+import { getImageUrl } from "../utils/imageUtils";
 
 const ProfilePage = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const user = useSelector((state) => state.auth.user);
   const userPosts = useSelector((state) => state.posts.userPosts);
   const postStatus = useSelector((state) => state.posts.status);
@@ -36,7 +39,7 @@ const ProfilePage = () => {
         <div className="avatar">
           <div className="h-28 w-28 overflow-hidden rounded-full border-4 border-blue-100 shadow-lg md:h-32 md:w-32">
             <img
-              src={user.image || "https://cdn-icons-png.flaticon.com/512/6596/6596121.png"}
+              src={getImageUrl(user.image, "https://cdn-icons-png.flaticon.com/512/6596/6596121.png")}
               alt="Profile"
               className="object-cover w-full h-full"
             />
@@ -82,6 +85,9 @@ const ProfilePage = () => {
             )}
           </div>
         </div>
+        <button className="btn btn-primary rounded-2xl sm:ml-auto" onClick={() => navigate("/profileEdit")}>
+          Edit profile
+        </button>
       </div>
 
       {/* Posts Section */}

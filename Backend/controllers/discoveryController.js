@@ -36,7 +36,7 @@ const buildConnectionState = (connection, currentUserId) => {
   };
 };
 
-const CONNECTION_USER_SELECT = "firstName lastName email image college additionalDetails active";
+const CONNECTION_USER_SELECT = "firstName lastName email image college additionalDetails active role";
 
 const connectionPopulateOptions = [
   {
@@ -101,6 +101,9 @@ const setUserFlag = (items = [], userId, enabled) => {
 
 const normalizeText = (value) => String(value || "").trim().toLowerCase();
 
+const isStudentConnectionEntry = (entry) =>
+  entry.student?.active !== false && entry.student?.role === "Student";
+
 const matchesConnectionFilters = (entry, filters) => {
   const student = entry.student || {};
   const details = student.additionalDetails || {};
@@ -110,6 +113,7 @@ const matchesConnectionFilters = (entry, filters) => {
   const graduationYear = normalizeText(filters.graduationYear);
 
   if (student.active === false) return false;
+  if (student.role !== "Student") return false;
   if (department && normalizeText(details.department) !== department) return false;
   if (college && normalizeText(student.college) !== college) return false;
   if (graduationYear && normalizeText(details.graduationYear) !== graduationYear) return false;
@@ -179,6 +183,7 @@ const buildStudentProfileResponse = ({ student, canViewExtendedProfile, canViewC
     email: canViewContact ? rawStudent.email : undefined,
     image: rawStudent.image,
     college: rawStudent.college,
+    role: rawStudent.role,
     additionalDetails: publicDetails,
     createdAt: rawStudent.createdAt,
   };
@@ -190,7 +195,7 @@ exports.searchStudents = async (req, res) => {
     const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
     const pageSize = Math.min(Math.max(parseInt(limit, 10) || 24, 1), 50);
 
-    const filter = { _id: { $ne: req.user.id } };
+    const filter = { _id: { $ne: req.user.id }, role: "Student", active: { $ne: false } };
     if (college) filter.college = college;
     if (search.trim()) {
       filter.$or = [
@@ -201,7 +206,7 @@ exports.searchStudents = async (req, res) => {
     }
 
     let query = User.find(filter)
-      .select("firstName lastName email image college additionalDetails")
+      .select("firstName lastName email image college additionalDetails role")
       .populate("additionalDetails")
       .sort({ firstName: 1 })
       .skip((pageNumber - 1) * pageSize)
@@ -252,12 +257,12 @@ exports.getStudentProfile = async (req, res) => {
     const isSelf = String(id) === String(req.user.id);
     const [student, viewer] = await Promise.all([
       User.findById(id)
-        .select("firstName lastName email image college additionalDetails active createdAt")
+        .select("firstName lastName email image college additionalDetails active role createdAt")
         .populate("additionalDetails"),
       User.findById(req.user.id).select("college additionalDetails").populate("additionalDetails"),
     ]);
 
-    if (!student || (student.active === false && !isSelf)) {
+    if (!student || student.role !== "Student" || (student.active === false && !isSelf)) {
       return res.status(404).json({ success: false, message: "Student not found" });
     }
 
@@ -326,9 +331,16 @@ exports.requestConnection = async (req, res) => {
       return res.status(400).json({ success: false, message: "Valid recipient is required" });
     }
 
-    const recipient = await User.findById(recipientId).select("_id active");
+    if (req.user.role !== "Student") {
+      return res.status(403).json({ success: false, message: "Connections are available only between students" });
+    }
+
+    const recipient = await User.findById(recipientId).select("_id active role");
     if (!recipient || recipient.active === false) {
       return res.status(404).json({ success: false, message: "Recipient not found" });
+    }
+    if (recipient.role !== "Student") {
+      return res.status(403).json({ success: false, message: "Connections are available only between students" });
     }
 
     const pairKey = buildPairKey(req.user.id, recipientId);
@@ -430,19 +442,29 @@ exports.respondToConnection = async (req, res) => {
       return res.status(400).json({ success: false, message: "Valid status is required" });
     }
 
-    const update = { status };
-    if (status === "accepted") update.acceptedAt = new Date();
+    if (req.user.role !== "Student") {
+      return res.status(403).json({ success: false, message: "Connections are available only between students" });
+    }
 
-    const connection = await Connection.findOneAndUpdate(
-      { _id: req.params.id, recipient: req.user.id, status: "pending" },
-      update,
-      { new: true }
-    );
+    const connection = await Connection.findOne({
+      _id: req.params.id,
+      recipient: req.user.id,
+      status: "pending",
+    })
+      .populate("requester", "role active")
+      .populate("recipient", "role active");
 
     if (!connection) return res.status(404).json({ success: false, message: "Connection request not found" });
+    if (connection.requester?.role !== "Student" || connection.recipient?.role !== "Student") {
+      return res.status(403).json({ success: false, message: "Connections are available only between students" });
+    }
+
+    connection.status = status;
+    if (status === "accepted") connection.acceptedAt = new Date();
+    await connection.save();
 
     await createNotification({
-      recipient: connection.requester,
+      recipient: connection.requester._id,
       sender: req.user.id,
       connection: connection._id,
       type: "Connection",
@@ -491,6 +513,7 @@ exports.getMyConnections = async (req, res) => {
 
     const filteredConnections = connections
       .map((connection) => serializeConnection(connection, req.user.id))
+      .filter((entry) => isStudentConnectionEntry(entry))
       .filter((entry) =>
         matchesConnectionFilters(entry, {
           search,
@@ -511,20 +534,26 @@ exports.getMyConnections = async (req, res) => {
 
 exports.getConnectionSummary = async (req, res) => {
   try {
-    const [acceptedConnections, incomingPending, outgoingPending] = await Promise.all([
+    const [acceptedConnections, incomingPendingConnections, outgoingPendingConnections] = await Promise.all([
       Connection.find({
         status: "accepted",
         $or: [{ requester: req.user.id }, { recipient: req.user.id }],
       })
         .populate(connectionPopulateOptions)
         .sort({ updatedAt: -1 }),
-      Connection.countDocuments({ recipient: req.user.id, status: "pending" }),
-      Connection.countDocuments({ requester: req.user.id, status: "pending" }),
+      Connection.find({ recipient: req.user.id, status: "pending" }).populate(connectionPopulateOptions),
+      Connection.find({ requester: req.user.id, status: "pending" }).populate(connectionPopulateOptions),
     ]);
 
     const acceptedEntries = acceptedConnections
       .map((connection) => serializeConnection(connection, req.user.id))
-      .filter((entry) => entry.student?.active !== false);
+      .filter((entry) => isStudentConnectionEntry(entry));
+    const incomingPending = incomingPendingConnections
+      .map((connection) => serializeConnection(connection, req.user.id))
+      .filter((entry) => isStudentConnectionEntry(entry)).length;
+    const outgoingPending = outgoingPendingConnections
+      .map((connection) => serializeConnection(connection, req.user.id))
+      .filter((entry) => isStudentConnectionEntry(entry)).length;
 
     res.status(200).json({
       success: true,

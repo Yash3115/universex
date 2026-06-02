@@ -3,6 +3,7 @@ import Cropper from "react-easy-crop";
 import { getCroppedImg } from "../utils/cropImageutils";
 import { useSelector, useDispatch } from "react-redux";
 import { updateProfileImage } from "../features/auth/authSlice";
+import { getImageUrl } from "../utils/imageUtils";
 
 const ProfileImageUploader = () => {
   const dispatch = useDispatch();
@@ -54,8 +55,8 @@ const ProfileImageUploader = () => {
     <div className="flex flex-col items-center space-y-4">
       {/* Profile Image Display */}
       <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-gray-300">
-        {user?.image ? (
-          <img src={user.image} alt="Profile" className="w-full h-full object-cover" />
+        {getImageUrl(user?.image) ? (
+          <img src={getImageUrl(user.image)} alt="Profile" className="w-full h-full object-cover" />
         ) : (
           <div className="flex items-center justify-center w-full h-full bg-gray-200 text-gray-500">
             No Image

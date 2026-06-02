@@ -1,6 +1,6 @@
 const Profile = require("../models/profileSchema");
 const User = require("../models/userSchema");
-const { uploadImageToCloudinary } = require("../utils/imageUploader");
+const { deleteImageFromCloudinary, uploadImageToCloudinary } = require("../utils/imageUploader");
 
 // Method for updating a profile
 exports.updateProfile = async (req, res) => {
@@ -70,6 +70,11 @@ exports.updateDisplayPicture = async (req, res) => {
       });
     }
 
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
     const image = await uploadImageToCloudinary(
       displayPicture,
       process.env.FOLDER_NAME || "profiles",
@@ -77,11 +82,11 @@ exports.updateDisplayPicture = async (req, res) => {
       1000
     );
 
-    const updatedProfile = await User.findByIdAndUpdate(
-      { _id: userId },
-      { image: image.secure_url },
-      { new: true }
-    ).select("-password").populate("additionalDetails");
+    await deleteImageFromCloudinary(user.image);
+
+    user.image = image;
+    await user.save();
+    const updatedProfile = await User.findById(userId).select("-password").populate("additionalDetails");
 
     res.send({
       success: true,

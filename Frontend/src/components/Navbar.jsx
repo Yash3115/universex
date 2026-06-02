@@ -5,6 +5,7 @@ import { logout } from "../features/auth/authSlice";
 import { FiMenu } from "react-icons/fi";
 import { AiOutlineClose } from "react-icons/ai";
 import NotificationBell from "./NotificationBell";
+import { getImageUrl } from "../utils/imageUtils";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -27,7 +28,7 @@ const Navbar = () => {
     if (isAuthenticated && user) {
       setUserData({
         userName: user.firstName,
-        userAvatar: user.image,
+        userAvatar: getImageUrl(user.image, "https://www.shutterstock.com/image-vector/no-photo-vector-flat-illustration-260nw-2470053053.jpg"),
       });
     }
   }, [isAuthenticated, user]);
@@ -124,6 +125,24 @@ const Navbar = () => {
                   className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-blue-600 hover:bg-blue-50"
                 >
                   Dashboard
+                </li>
+                <li
+                  onClick={() => {
+                    navigate("/profile");
+                    closeDropdown();
+                  }}
+                  className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  My profile
+                </li>
+                <li
+                  onClick={() => {
+                    navigate("/profileEdit");
+                    closeDropdown();
+                  }}
+                  className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  Edit profile
                 </li>
                 <li
                   onClick={handleLogout}

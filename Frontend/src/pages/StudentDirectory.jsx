@@ -17,6 +17,7 @@ const StudentDirectory = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { actionLoadingByStudentId, students, status, error, filters } = useSelector((state) => state.discovery);
+  const currentUser = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     dispatch(searchStudents(filters));
@@ -57,6 +58,10 @@ const StudentDirectory = () => {
   const renderConnectionActions = (student) => {
     const connection = getConnectionState(student);
     const isLoading = Boolean(actionLoadingByStudentId[student._id]);
+
+    if (currentUser && currentUser.role !== "Student") {
+      return <button className="btn mt-5 w-full rounded-2xl" onClick={() => navigate(`/students/${student._id}`)}>View profile</button>;
+    }
 
     if (connection.direction === "incoming" && connection.status === "pending") {
       return (
