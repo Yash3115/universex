@@ -12,9 +12,12 @@ function CommunitySideBar() {
     { name: "Dashboard", route: "/dashboard" },
     { name: "Community", route: "/community" },
     { name: "Jobs & Opportunities", route: "/jobs" },
+    { name: "Courses & Materials", route: "/courses" },
+    { name: "Results", route: "/results" },
+    { name: "Student Chat", route: "/chat" },
     { name: "Student Discovery", route: "/students" },
     { name: "Budget Tracker", route: "/budget" },
-    { name: "Academic Planner", route: "/class" },
+    { name: "Tasks & Schedule", route: "/class" },
   ];
 
   return (

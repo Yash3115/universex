@@ -30,6 +30,7 @@ const resultRoutes = require("./routes/resultRoutes.js");
 const courseQuestionRoutes = require("./routes/courseQuestionRoutes.js");
 const courseAttendanceRoutes = require("./routes/courseAttendanceRoutes.js");
 const officeHourRoutes = require("./routes/officeHourRoutes.js");
+const chatRoutes = require("./routes/chatRoutes.js");
 const { cloudinaryConnect } = require("./config/cloudinary");
 
 // Initialize Express App
@@ -111,6 +112,7 @@ app.use("/api/results", resultRoutes);
 app.use("/api/course-qa", courseQuestionRoutes);
 app.use("/api/course-attendance", courseAttendanceRoutes);
 app.use("/api/office-hours", officeHourRoutes);
+app.use("/api/chats", chatRoutes);
 // Global Error Handling Middleware
 app.use(errorMiddleware);
 

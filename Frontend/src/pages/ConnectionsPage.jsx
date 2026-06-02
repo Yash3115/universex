@@ -270,9 +270,14 @@ const ConnectionsPage = () => {
                     )}
 
                     {connection.status === "accepted" && (
-                      <button className="btn btn-primary mt-4 w-full rounded-2xl" onClick={() => setInteractionRecipient(student)}>
-                        Start interaction
-                      </button>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button className="btn btn-primary rounded-2xl" onClick={() => navigate("/chat")}>
+                          Chat
+                        </button>
+                        <button className="btn rounded-2xl" onClick={() => setInteractionRecipient(student)}>
+                          Interact
+                        </button>
+                      </div>
                     )}
 
                     <p className="mt-4 text-xs font-semibold text-gray-400">

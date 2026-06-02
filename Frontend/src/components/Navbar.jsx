@@ -54,10 +54,11 @@ const Navbar = () => {
   const features = [
     { name: "Community", route: "/community" },
     { name: "Jobs", route: "/jobs" },
-    { name: "Budget", route: "/budget" },
-    { name: "Academics", route: "/class" },
+    { name: "Planner", route: "/class" },
+    { name: "Courses", route: "/courses" },
+    { name: "Chat", route: "/chat" },
     { name: "Students", route: "/students" },
-    { name: "Directory", route: "/contactDirectory" },
+    { name: "Budget", route: "/budget" },
     { name: "Profile", route: "/profile" },
   ];
 

@@ -28,6 +28,7 @@ const CoursesPage = lazy(() => import("./pages/CoursesPage"));
 const CourseDetailPage = lazy(() => import("./pages/CourseDetailPage"));
 const ResultsPage = lazy(() => import("./pages/ResultsPage"));
 const OfficeHoursPage = lazy(() => import("./pages/OfficeHoursPage"));
+const ChatPage = lazy(() => import("./pages/ChatPage"));
 
 const PageLoader = () => (
   <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
@@ -186,6 +187,14 @@ const App = () => {
             element={
               <AuthenticatedRoutes>
                 <InteractionsPage />
+              </AuthenticatedRoutes>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <AuthenticatedRoutes>
+                <ChatPage />
               </AuthenticatedRoutes>
             }
           />
