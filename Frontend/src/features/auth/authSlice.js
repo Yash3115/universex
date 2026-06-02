@@ -110,6 +110,27 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
+export const completeOnboarding = createAsyncThunk(
+  "auth/completeOnboarding",
+  async (data, { rejectWithValue }) => {
+    try {
+      const response = await api.post(
+        "/api/users/complete-onboarding",
+        data,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      toast.success(response.data.message || "Welcome setup completed");
+      return response.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to complete setup");
+      return rejectWithValue(error.response?.data);
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: "auth",
   initialState: {
@@ -172,6 +193,17 @@ const authSlice = createSlice({
       })
       .addCase(updateProfile.rejected, (state, action) => {
         state.error = action.payload || "Something went wrong";
+      })
+      .addCase(completeOnboarding.pending, (state) => {
+        state.error = null;
+      })
+      .addCase(completeOnboarding.fulfilled, (state, action) => {
+        state.user = action.payload.user || state.user;
+        state.isAuthenticated = true;
+        state.loading = false;
+      })
+      .addCase(completeOnboarding.rejected, (state, action) => {
+        state.error = action.payload || "Unable to complete setup";
       });
   },
 });

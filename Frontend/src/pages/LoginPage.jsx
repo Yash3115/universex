@@ -1,11 +1,8 @@
-// Login Page is ready.
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { login } from "../features/auth/authSlice";
-import { useSelector } from "react-redux";
-
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -14,93 +11,118 @@ const Login = () => {
   const [formData, setFormData] = useState({ email: "", password: "" });
   const [errors, setErrors] = useState({});
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/"); // Redirect only after login success
+      navigate(
+        user?.mustChangePassword || user?.profileCompletionRequired
+          ? "/onboarding"
+          : "/dashboard",
+        { replace: true }
+      );
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, navigate, user]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-    setErrors({ ...errors, [name]: "" });
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((current) => ({ ...current, [name]: value }));
+    setErrors((current) => ({ ...current, [name]: "" }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    let validationErrors = {};
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const validationErrors = {};
 
-    if (!formData.email) {
-      validationErrors.email = "Email is required";
-    }
-    if (!formData.password) {
-      validationErrors.password = "Password is required";
-    }
+    if (!formData.email) validationErrors.email = "Email is required";
+    if (!formData.password) validationErrors.password = "Password is required";
 
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    dispatch(login(formData));
 
+    dispatch(login(formData));
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-white p-4">
-      <div className="w-full max-w-4xl flex flex-col md:flex-row bg-white text-black rounded-lg overflow-hidden shadow-lg">
-        <div className="hidden md:flex md:w-1/2 items-center justify-center bg-gray-200">
-          <img src="/Login.jpg" alt="Login Illustration" className="w-full h-full object-cover" />
+    <main className="flex min-h-screen items-center justify-center bg-white p-4">
+      <section className="flex w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-white text-black shadow-lg md:flex-row">
+        <div className="hidden items-center justify-center bg-gray-200 md:flex md:w-1/2">
+          <img
+            src="/Login.jpg"
+            alt="Students using the UniVerseX portal"
+            className="h-full w-full object-cover"
+          />
         </div>
-        
-        <div className="w-full md:w-1/2 p-8">
-          {/* <button className="text-xl mb-4 flex items-center text-black">
-            <FaArrowLeft className="mr-2" />
-          </button> */}
-          <h2 className="text-3xl font-bold text-center text-blue-900">Welcome Back</h2>
-          <h3 className="text-lg font-semibold text-center mt-2 mb-6">Login to Your Account</h3>
+
+        <div className="w-full p-8 md:w-1/2">
+          <h1 className="text-center text-3xl font-bold text-blue-900">
+            Welcome Back
+          </h1>
+          <p className="mb-6 mt-2 text-center text-lg font-semibold">
+            Login to your account
+          </p>
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
-              <label className="block text-gray-700">Email Address</label>
+              <label htmlFor="email" className="block text-gray-700">
+                Email Address
+              </label>
               <input
+                id="email"
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full p-3 mt-1 rounded-lg bg-white text-black border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                className="mt-1 w-full rounded-lg border border-gray-400 bg-white p-3 text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-500">{errors.email}</p>
+              )}
             </div>
             <div className="mb-4">
-              <label className="block text-gray-700">Password</label>
+              <label htmlFor="password" className="block text-gray-700">
+                Password
+              </label>
               <div className="relative">
                 <input
+                  id="password"
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full p-3 mt-1 rounded-lg bg-white text-black border border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  className="mt-1 w-full rounded-lg border border-gray-400 bg-white p-3 pr-12 text-black shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   className="absolute right-3 top-4 text-gray-500 hover:text-gray-700"
-                  onClick={() => setShowPassword(!showPassword)}
+                  onClick={() => setShowPassword((current) => !current)}
                 >
-                  {showPassword ? <AiOutlineEyeInvisible size={20} /> : <AiOutlineEye size={20} />}
+                  {showPassword ? (
+                    <AiOutlineEyeInvisible size={20} />
+                  ) : (
+                    <AiOutlineEye size={20} />
+                  )}
                 </button>
               </div>
-              {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-500">{errors.password}</p>
+              )}
             </div>
-            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold p-3 rounded-lg mt-4">
+            <button
+              type="submit"
+              className="mt-4 w-full rounded-lg bg-blue-600 p-3 font-semibold text-white hover:bg-blue-700"
+            >
               Login
             </button>
           </form>
-          <p className="text-center mt-4 text-gray-700">
-            Don’t have an account? <span className="text-blue-600 cursor-pointer" onClick={()=>navigate("/signup")}>Sign Up</span>
+          <p className="mt-4 text-center text-sm leading-6 text-gray-600">
+            Need access? Ask your admin to create your student or professor account.
           </p>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 };
 

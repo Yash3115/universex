@@ -29,6 +29,8 @@ const CourseDetailPage = lazy(() => import("./pages/CourseDetailPage"));
 const ResultsPage = lazy(() => import("./pages/ResultsPage"));
 const OfficeHoursPage = lazy(() => import("./pages/OfficeHoursPage"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
+const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
+const AdminAccountsPage = lazy(() => import("./pages/AdminAccountsPage"));
 
 const PageLoader = () => (
   <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
@@ -83,6 +85,14 @@ const App = () => {
             element={
               <AuthenticatedRoutes>
                 <ProfileEdit />
+              </AuthenticatedRoutes>
+            }
+          />
+          <Route
+            path="/onboarding"
+            element={
+              <AuthenticatedRoutes>
+                <OnboardingPage />
               </AuthenticatedRoutes>
             }
           />
@@ -227,6 +237,14 @@ const App = () => {
             element={
               <AuthenticatedRoutes>
                 <OfficeHoursPage />
+              </AuthenticatedRoutes>
+            }
+          />
+          <Route
+            path="/admin/accounts"
+            element={
+              <AuthenticatedRoutes>
+                <AdminAccountsPage />
               </AuthenticatedRoutes>
             }
           />

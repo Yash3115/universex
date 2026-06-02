@@ -16,6 +16,7 @@ import courseQAReducer from "../features/courseQA/courseQASlice";
 import courseAttendanceReducer from "../features/courseAttendance/courseAttendanceSlice";
 import officeHoursReducer from "../features/officeHours/officeHoursSlice";
 import chatReducer from "../features/chat/chatSlice";
+import adminAccountsReducer from "../features/admin/adminAccountsSlice";
 
 
 const store = configureStore({
@@ -37,6 +38,7 @@ const store = configureStore({
     courseAttendance: courseAttendanceReducer,
     officeHours: officeHoursReducer,
     chat: chatReducer,
+    adminAccounts: adminAccountsReducer,
 
   },
 });

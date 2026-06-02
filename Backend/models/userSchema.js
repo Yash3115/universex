@@ -46,6 +46,11 @@ const userSchema = new mongoose.Schema(
         facultyProfile: { type: mongoose.Schema.Types.ObjectId, ref: "FacultyProfile" },
         verificationStatus: { type: String, enum: ["pending", "verified", "rejected"], default: "verified" },
         active: { type: Boolean, default: true },
+        mustChangePassword: { type: Boolean, default: false },
+        profileCompletionRequired: { type: Boolean, default: false },
+        provisionedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        provisionedAt: { type: Date },
+        temporaryPasswordLastSetAt: { type: Date },
     },
     { timestamps: true }
 );

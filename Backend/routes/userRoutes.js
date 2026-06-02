@@ -10,14 +10,17 @@ const {
   changePassword,
   getBalance,
   getUser,
-  logout
+  logout,
+  createManagedAccount,
+  listManagedAccounts,
+  completeOnboarding,
 } = require("../controllers/Auth")
 const {
   resetPasswordToken,
   resetPassword,
 } = require("../controllers/ResetPassword")
 
-const { authMiddleware } = require("../middlewares/authMiddleware")
+const { authMiddleware, isAuthorised } = require("../middlewares/authMiddleware")
 
 // Routes for Login, Signup, and Authentication
 
@@ -36,6 +39,13 @@ router.post("/sendotp", sendotp)
 
 // Route for Changing the password
 router.post("/changepassword", authMiddleware, changePassword)
+
+// Route for completing admin-provisioned first-login setup
+router.post("/complete-onboarding", authMiddleware, completeOnboarding)
+
+// Admin-managed account provisioning
+router.get("/admin/accounts", authMiddleware, isAuthorised("Admin"), listManagedAccounts)
+router.post("/admin/accounts", authMiddleware, isAuthorised("Admin"), createManagedAccount)
 
 // Route for session persistance
 router.get("/getUser", authMiddleware, getUser);

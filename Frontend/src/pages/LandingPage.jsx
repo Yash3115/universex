@@ -25,7 +25,7 @@ const Landing = () => {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
   const handleGetStarted = () => {
-    navigate(isAuthenticated ? "/dashboard" : "/signup");
+    navigate(isAuthenticated ? "/dashboard" : "/login");
   };
 
   const handleLearnMore = () => {
@@ -58,7 +58,7 @@ const Landing = () => {
               className="rounded-xl bg-purple-700 px-6 py-3 font-bold text-white shadow-lg shadow-purple-200 transition hover:-translate-y-0.5 hover:bg-purple-800"
               onClick={handleGetStarted}
             >
-              Get Started
+              {isAuthenticated ? "Open Dashboard" : "Login"}
             </button>
             <button
               type="button"

@@ -1,10 +1,11 @@
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { FaBookOpen, FaBriefcase, FaCalendarAlt, FaChartPie, FaComments, FaPhoneAlt, FaUserCircle, FaUsers } from "react-icons/fa";
+import { FaBookOpen, FaBriefcase, FaCalendarAlt, FaChartPie, FaComments, FaPhoneAlt, FaUserCircle, FaUserShield, FaUsers } from "react-icons/fa";
 
 function Dashboard() {
   const navigate = useNavigate();
-  const username = useSelector((state) => state.auth.user?.firstName || "there");
+  const user = useSelector((state) => state.auth.user);
+  const username = user?.firstName || "there";
 
   const features = [
     {
@@ -58,6 +59,17 @@ function Dashboard() {
       route: "/students",
       description: "Find peers by college, department, year, and profile details.",
     },
+    ...(user?.role === "Admin"
+      ? [
+          {
+            name: "Account Management",
+            icon: FaUserShield,
+            accent: "from-slate-700 to-blue-700",
+            route: "/admin/accounts",
+            description: "Create student and professor accounts, then track first-login setup.",
+          },
+        ]
+      : []),
   ];
 
   return (

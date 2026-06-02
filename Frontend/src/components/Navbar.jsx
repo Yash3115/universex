@@ -60,6 +60,7 @@ const Navbar = () => {
     { name: "Students", route: "/students" },
     { name: "Budget", route: "/budget" },
     { name: "Profile", route: "/profile" },
+    ...(user?.role === "Admin" ? [{ name: "Accounts", route: "/admin/accounts" }] : []),
   ];
 
   const getLinkClass = (route) =>
@@ -145,6 +146,17 @@ const Navbar = () => {
                 >
                   Edit profile
                 </li>
+                {user?.role === "Admin" && (
+                  <li
+                    onClick={() => {
+                      navigate("/admin/accounts");
+                      closeDropdown();
+                    }}
+                    className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                  >
+                    Manage accounts
+                  </li>
+                )}
                 <li
                   onClick={handleLogout}
                   className="cursor-pointer rounded-xl px-3 py-2 text-sm font-semibold text-red-500 hover:bg-red-50"
