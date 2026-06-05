@@ -28,7 +28,7 @@ const assignmentSubmissionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-assignmentSubmissionSchema.index({ assignment: 1, student: 1 }, { unique: true });
+assignmentSubmissionSchema.index({ dataScope: 1, assignment: 1, student: 1 }, { unique: true });
 assignmentSubmissionSchema.index({ course: 1, status: 1 });
 assignmentSubmissionSchema.index({ student: 1, submittedAt: -1 });
 

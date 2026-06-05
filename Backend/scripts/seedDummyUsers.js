@@ -4,7 +4,9 @@ const bcrypt = require("bcryptjs");
 const dotenv = require("dotenv");
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
+require("../utils/registerDataScopePlugin");
 
+const { DATA_SCOPES, getDataScope, runWithDataScope, runWithoutDataScope } = require("../utils/dataScope");
 const Assessment = require("../models/assessmentSchema");
 const Assignment = require("../models/assignmentSchema");
 const ChatMessage = require("../models/chatMessageSchema");
@@ -26,13 +28,6 @@ const DEFAULT_IMAGE = {
   format: "svg",
 };
 
-const parseBoolean = (value) => String(value).toLowerCase() === "true";
-
-const shouldUseDemoDatabase = () =>
-  parseBoolean(process.env.USE_DEMO_DB) ||
-  parseBoolean(process.env.DEMO_DATABASE_ENABLED) ||
-  process.env.NODE_ENV === "demo";
-
 const daysFromNow = (days) => {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -40,6 +35,51 @@ const daysFromNow = (days) => {
 };
 
 const buildPairKey = (firstUserId, secondUserId) => [String(firstUserId), String(secondUserId)].sort().join(":");
+
+const scopedPayload = (payload = {}) => ({
+  ...payload,
+  dataScope: getDataScope(),
+});
+
+const findFixtureUser = async (email) => {
+  const normalizedEmail = email.trim().toLowerCase();
+  return runWithoutDataScope(async () => {
+    const scopedUser = await User.findOne({ email: normalizedEmail, dataScope: getDataScope() });
+    if (scopedUser) return scopedUser;
+
+    if (getDataScope() === DATA_SCOPES.DEMO && normalizedEmail.endsWith("@universex.demo")) {
+      return await User.findOne({ email: normalizedEmail });
+    }
+
+    return null;
+  });
+};
+
+const findFixtureRecord = async (Model, filter) =>
+  runWithoutDataScope(async () => {
+    const scopedRecord = await Model.findOne({ ...filter, dataScope: getDataScope() });
+    if (scopedRecord) return scopedRecord;
+    if (getDataScope() === DATA_SCOPES.DEMO) return await Model.findOne(filter);
+    return null;
+  });
+
+const upsertFixtureRecord = async (Model, filter, update) => {
+  const updatePayload = scopedPayload(update);
+  const existing = await findFixtureRecord(Model, filter);
+
+  if (existing) {
+    const updated = await runWithoutDataScope(async () =>
+      await Model.findByIdAndUpdate(existing._id, updatePayload, {
+        new: true,
+        runValidators: true,
+        setDefaultsOnInsert: true,
+      })
+    );
+    if (updated) return updated;
+  }
+
+  return Model.create(updatePayload);
+};
 
 const dummyUsers = [
   {
@@ -73,7 +113,7 @@ const dummyUsers = [
     profile: {
       about: "Professor of Computer Science mentoring projects, research, and placement preparation.",
       contactNumber: 9000000010,
-      department: "Computer Science Engineering",
+      department: "Demo Computer Science Engineering",
       graduationYear: 2010,
       skills: ["Machine Learning", "Data Structures", "Research Mentoring"],
       interests: ["Applied AI", "Student research", "Career guidance"],
@@ -82,7 +122,7 @@ const dummyUsers = [
     facultyProfile: {
       employeeId: "UX-FAC-101",
       designation: "Associate Professor",
-      department: "Computer Science Engineering",
+      department: "Demo Computer Science Engineering",
       officeLocation: "Block B, Room 304",
       bio: "Mentors capstone teams and coordinates industry-backed AI projects.",
       researchAreas: ["Responsible AI", "Learning analytics", "Human-centered computing"],
@@ -101,7 +141,7 @@ const dummyUsers = [
     profile: {
       about: "Professor of AI and data systems leading hands-on labs and research sprints.",
       contactNumber: 9000000011,
-      department: "Computer Science Engineering",
+      department: "Demo Computer Science Engineering",
       graduationYear: 2006,
       skills: ["Deep Learning", "Data Engineering", "Academic Mentoring"],
       interests: ["Applied ML", "MLOps", "Student startups"],
@@ -110,7 +150,7 @@ const dummyUsers = [
     facultyProfile: {
       employeeId: "UX-FAC-102",
       designation: "Professor",
-      department: "Computer Science Engineering",
+      department: "Demo Computer Science Engineering",
       officeLocation: "Block C, Room 212",
       bio: "Runs the Applied ML studio and helps students publish practical AI projects.",
       researchAreas: ["Deep learning", "MLOps", "Information retrieval"],
@@ -129,7 +169,7 @@ const dummyUsers = [
     profile: {
       about: "Electronics professor coordinating embedded systems labs and robotics projects.",
       contactNumber: 9000000012,
-      department: "Electronics and Communication Engineering",
+      department: "Demo Electronics and Communication Engineering",
       graduationYear: 2008,
       skills: ["Embedded Systems", "IoT", "Robotics"],
       interests: ["Hardware labs", "Robotics club", "Industry projects"],
@@ -138,7 +178,7 @@ const dummyUsers = [
     facultyProfile: {
       employeeId: "UX-FAC-103",
       designation: "Assistant Professor",
-      department: "Electronics and Communication Engineering",
+      department: "Demo Electronics and Communication Engineering",
       officeLocation: "Electronics Lab, Room 118",
       bio: "Guides hardware prototypes and lab-based course projects.",
       researchAreas: ["Embedded AI", "Sensor networks", "Robotics education"],
@@ -157,7 +197,7 @@ const dummyUsers = [
     profile: {
       about: "General demo student account for testing the student flow.",
       contactNumber: 9000000002,
-      department: "Computer Science Engineering",
+      department: "Demo Computer Science Engineering",
       graduationYear: 2026,
       skills: ["JavaScript", "React", "Node.js"],
       interests: ["Hackathons", "Open source", "AI"],
@@ -214,7 +254,7 @@ const dummyUsers = [
     profile: {
       about: "Backend-focused student building APIs and campus automation tools.",
       contactNumber: 9000000005,
-      department: "Computer Science Engineering",
+      department: "Demo Computer Science Engineering",
       graduationYear: 2026,
       skills: ["Java", "Spring Boot", "PostgreSQL"],
       interests: ["Cloud", "Competitive programming", "Mentoring juniors"],
@@ -271,7 +311,7 @@ const dummyUsers = [
     profile: {
       about: "Robotics club member looking for hardware projects and hackathon teams.",
       contactNumber: 9000000008,
-      department: "Electronics and Communication Engineering",
+      department: "Demo Electronics and Communication Engineering",
       graduationYear: 2026,
       skills: ["Arduino", "Embedded C", "IoT"],
       interests: ["Robotics", "Hackathons", "Open hardware"],
@@ -373,7 +413,7 @@ const dummyCourses = [
     code: "CS301",
     description: "Core problem-solving course covering arrays, trees, graphs, dynamic programming, and interview-style implementation practice.",
     college: "UniverseX Institute of Technology",
-    department: "Computer Science Engineering",
+    department: "Demo Computer Science Engineering",
     semester: "5",
     academicYear: "2026-2027",
     section: "A",
@@ -387,7 +427,7 @@ const dummyCourses = [
     code: "CS451",
     description: "Project-based machine learning course with datasets, model evaluation, deployment basics, and responsible AI discussions.",
     college: "UniverseX Institute of Technology",
-    department: "Computer Science Engineering",
+    department: "Demo Computer Science Engineering",
     semester: "7",
     academicYear: "2026-2027",
     section: "ML",
@@ -401,7 +441,7 @@ const dummyCourses = [
     code: "EC210",
     description: "Hands-on lab course for microcontrollers, sensor integration, timers, interrupts, and IoT prototype workflows.",
     college: "UniverseX Institute of Technology",
-    department: "Electronics and Communication Engineering",
+    department: "Demo Electronics and Communication Engineering",
     semester: "4",
     academicYear: "2026-2027",
     section: "LAB1",
@@ -553,7 +593,7 @@ const dummyConnections = [
 const dummyChats = [
   {
     type: "department",
-    department: "Computer Science Engineering",
+    department: "Demo Computer Science Engineering",
     messages: [
       { senderEmail: "student@universex.demo", content: "Has anyone started the ML baseline report yet?" },
       { senderEmail: "rohan@universex.demo", content: "Yes, I shared a notebook outline after today's lab." },
@@ -579,26 +619,23 @@ const dummyChats = [
 ];
 
 const connectDatabase = async () => {
-  const useDemoDb = shouldUseDemoDatabase();
-  const mongoUrl = useDemoDb ? process.env.MONGODB_DEMO_URL : process.env.MONGODB_URL;
+  const mongoUrl = process.env.MONGODB_URL;
 
   if (!mongoUrl) {
-    throw new Error(
-      `${useDemoDb ? "MONGODB_DEMO_URL" : "MONGODB_URL"} is not configured. Add it to Backend/.env first.`
-    );
+    throw new Error("MONGODB_URL is not configured. Add it to Backend/.env first.");
   }
 
   await mongoose.connect(mongoUrl);
-  console.log(`Using ${useDemoDb ? "demo" : "primary"} database for seed data.`);
+  console.log(`Using ${getDataScope()} data scope for seed data.`);
 };
 
 const upsertDummyUser = async (userData, hashedPassword, adminUserId) => {
   const normalizedEmail = userData.email.trim().toLowerCase();
-  let user = await User.findOne({ email: normalizedEmail });
+  let user = await findFixtureUser(normalizedEmail);
 
   let profileId = user?.additionalDetails;
   if (profileId) {
-    const existingProfile = await Profile.findByIdAndUpdate(profileId, userData.profile, {
+    const existingProfile = await Profile.findByIdAndUpdate(profileId, scopedPayload(userData.profile), {
       new: true,
       runValidators: true,
     });
@@ -608,11 +645,11 @@ const upsertDummyUser = async (userData, hashedPassword, adminUserId) => {
   }
 
   if (!profileId) {
-    const profile = await Profile.create(userData.profile);
+    const profile = await Profile.create(scopedPayload(userData.profile));
     profileId = profile._id;
   }
 
-  const userPayload = {
+  const userPayload = scopedPayload({
     firstName: userData.firstName,
     lastName: userData.lastName,
     email: normalizedEmail,
@@ -634,7 +671,7 @@ const upsertDummyUser = async (userData, hashedPassword, adminUserId) => {
         `${userData.firstName} ${userData.lastName}`
       )}`,
     },
-  };
+  });
 
   if (!user) {
     user = new User(userPayload);
@@ -645,7 +682,8 @@ const upsertDummyUser = async (userData, hashedPassword, adminUserId) => {
   await user.save();
 
   if (userData.facultyProfile) {
-    const facultyProfile = await FacultyProfile.findOneAndUpdate(
+    const facultyProfile = await upsertFixtureRecord(
+      FacultyProfile,
       { user: user._id },
       {
         ...userData.facultyProfile,
@@ -671,7 +709,8 @@ const seedDummyJobs = async (usersByEmail) => {
     if (!postedBy) continue;
 
     const { lastDateToApplyOffsetDays, postedByEmail, ...jobPayload } = jobData;
-    const job = await Job.findOneAndUpdate(
+    const job = await upsertFixtureRecord(
+      Job,
       { title: jobPayload.title, companyName: jobPayload.companyName },
       {
         ...jobPayload,
@@ -704,7 +743,8 @@ const seedDummyCourses = async (usersByEmail) => {
       }));
 
     const { professorEmail, studentEmails, ...coursePayload } = courseData;
-    const course = await Course.findOneAndUpdate(
+    const course = await upsertFixtureRecord(
+      Course,
       {
         code: coursePayload.code,
         college: coursePayload.college,
@@ -735,7 +775,8 @@ const seedDummyMaterials = async (coursesByCode) => {
     if (!course) continue;
 
     const { courseCode, ...materialPayload } = materialData;
-    const material = await CourseMaterial.findOneAndUpdate(
+    const material = await upsertFixtureRecord(
+      CourseMaterial,
       { course: course._id, title: materialPayload.title },
       {
         ...materialPayload,
@@ -761,7 +802,8 @@ const seedDummyAnnouncements = async (coursesByCode) => {
     if (!course) continue;
 
     const { courseCode, ...announcementPayload } = announcementData;
-    const announcement = await CourseAnnouncement.findOneAndUpdate(
+    const announcement = await upsertFixtureRecord(
+      CourseAnnouncement,
       { course: course._id, title: announcementPayload.title },
       {
         ...announcementPayload,
@@ -787,7 +829,8 @@ const seedDummyAssignments = async (coursesByCode) => {
     if (!course) continue;
 
     const { courseCode, dueOffsetDays, ...assignmentPayload } = assignmentData;
-    const assignment = await Assignment.findOneAndUpdate(
+    const assignment = await upsertFixtureRecord(
+      Assignment,
       { course: course._id, title: assignmentPayload.title },
       {
         ...assignmentPayload,
@@ -817,7 +860,8 @@ const seedDummyResults = async (coursesByCode, usersByEmail) => {
 
     const { courseCode, grades, ...assessmentPayload } = assessmentData;
     const publishedAt = daysFromNow(-1);
-    const assessment = await Assessment.findOneAndUpdate(
+    const assessment = await upsertFixtureRecord(
+      Assessment,
       { course: course._id, title: assessmentPayload.title },
       {
         ...assessmentPayload,
@@ -836,7 +880,8 @@ const seedDummyResults = async (coursesByCode, usersByEmail) => {
       if (!student) continue;
 
       const { studentEmail, ...gradePayload } = gradeData;
-      const gradeRecord = await GradeRecord.findOneAndUpdate(
+      const gradeRecord = await upsertFixtureRecord(
+        GradeRecord,
         { assessment: assessment._id, student: student._id },
         {
           ...gradePayload,
@@ -863,7 +908,8 @@ const seedDummyConnections = async (usersByEmail) => {
     const recipient = usersByEmail.get(connectionData.recipientEmail);
     if (!requester || !recipient) continue;
 
-    const connection = await Connection.findOneAndUpdate(
+    const connection = await upsertFixtureRecord(
+      Connection,
       { pairKey: buildPairKey(requester._id, recipient._id) },
       {
         requester: requester._id,
@@ -889,7 +935,8 @@ const seedDummyChats = async (usersByEmail) => {
     let thread;
 
     if (chatData.type === "department") {
-      thread = await ChatThread.findOneAndUpdate(
+      thread = await upsertFixtureRecord(
+        ChatThread,
         { type: "department", department: chatData.department },
         {
           type: "department",
@@ -905,7 +952,8 @@ const seedDummyChats = async (usersByEmail) => {
       if (participants.length !== 2) continue;
 
       const pairKey = buildPairKey(participants[0]._id, participants[1]._id);
-      thread = await ChatThread.findOneAndUpdate(
+      thread = await upsertFixtureRecord(
+        ChatThread,
         { type: "direct", pairKey },
         {
           type: "direct",
@@ -922,7 +970,8 @@ const seedDummyChats = async (usersByEmail) => {
       const sender = usersByEmail.get(messageData.senderEmail);
       if (!sender) continue;
 
-      const message = await ChatMessage.findOneAndUpdate(
+      const message = await upsertFixtureRecord(
+        ChatMessage,
         {
           thread: thread._id,
           sender: sender._id,
@@ -947,7 +996,7 @@ const seedDummyChats = async (usersByEmail) => {
   return { threads, messages };
 };
 
-const seedDummyUsers = async () => {
+const seedDummyUsersInCurrentScope = async () => {
   await connectDatabase();
   const hashedPassword = await bcrypt.hash(DEFAULT_PASSWORD, 10);
   const usersByEmail = new Map();
@@ -1011,6 +1060,9 @@ const seedDummyUsers = async () => {
   console.log(`\nProfessor credential to try: prof.kabir@universex.demo / ${DEFAULT_PASSWORD}`);
   console.log("\nYou can rerun this command anytime; it updates the same demo users, jobs, courses, materials, assignments, results, and chats.\n");
 };
+
+const seedDummyUsers = async ({ dataScope = process.env.SEED_DATA_SCOPE || DATA_SCOPES.PRODUCTION } = {}) =>
+  runWithDataScope(dataScope, seedDummyUsersInCurrentScope);
 
 if (require.main === module) {
   seedDummyUsers()

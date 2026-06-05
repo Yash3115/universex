@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { FiLogOut, FiUserPlus } from "react-icons/fi";
+import { FiLogOut, FiRefreshCcw, FiUserPlus } from "react-icons/fi";
 import { exitDemoSession } from "../features/auth/authSlice";
 
 const DemoBanner = () => {
@@ -13,7 +13,14 @@ const DemoBanner = () => {
   const handleExitDemo = async () => {
     const result = await dispatch(exitDemoSession());
     if (exitDemoSession.fulfilled.match(result)) {
-      navigate("/", { replace: true });
+      navigate(result.payload?.restoredUser ? "/dashboard" : "/", { replace: true });
+    }
+  };
+
+  const handleSwitchRole = async () => {
+    const result = await dispatch(exitDemoSession());
+    if (exitDemoSession.fulfilled.match(result)) {
+      navigate("/demo", { replace: true });
     }
   };
 
@@ -34,6 +41,14 @@ const DemoBanner = () => {
           >
             <FiUserPlus />
             Create full account
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-full border border-amber-300 bg-white px-4 py-2 text-xs font-bold text-amber-950 transition hover:bg-amber-100"
+            onClick={handleSwitchRole}
+          >
+            <FiRefreshCcw />
+            Switch role
           </button>
           <button
             type="button"

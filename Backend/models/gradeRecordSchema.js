@@ -14,7 +14,7 @@ const gradeRecordSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-gradeRecordSchema.index({ assessment: 1, student: 1 }, { unique: true });
+gradeRecordSchema.index({ dataScope: 1, assessment: 1, student: 1 }, { unique: true });
 gradeRecordSchema.index({ course: 1, student: 1 });
 gradeRecordSchema.index({ student: 1, publishedAt: -1 });
 

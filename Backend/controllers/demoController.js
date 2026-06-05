@@ -1,22 +1,22 @@
 const jwt = require("jsonwebtoken");
 const AccessRequest = require("../models/accessRequestSchema");
 const User = require("../models/userSchema");
+const { DATA_SCOPES, runWithDataScope } = require("../utils/dataScope");
 const {
   getAuthCookieOptions,
   getClearAuthCookieOptions,
 } = require("../utils/cookieOptions");
 
-const DEMO_STUDENT_EMAIL = process.env.DEMO_STUDENT_EMAIL || "student@universex.demo";
+const DEMO_ROLE_EMAILS = {
+  Student: process.env.DEMO_STUDENT_EMAIL || "student@universex.demo",
+  Professor: process.env.DEMO_PROFESSOR_EMAIL || "prof.kabir@universex.demo",
+  Admin: process.env.DEMO_ADMIN_EMAIL || "admin@universex.demo",
+};
 const DEMO_SESSION_SECONDS = Number(process.env.DEMO_SESSION_SECONDS) || 60 * 60 * 2;
 const DEMO_RESET_NOTE =
   process.env.DEMO_RESET_NOTE || "Sample data resets regularly and demo activity is disposable.";
 
-const parseBoolean = (value) => String(value).toLowerCase() === "true";
-
-const isDemoDatabaseRuntime = () =>
-  parseBoolean(process.env.USE_DEMO_DB) ||
-  parseBoolean(process.env.DEMO_DATABASE_ENABLED) ||
-  process.env.NODE_ENV === "demo";
+const normalizeDemoRole = (role) => (["Student", "Professor", "Admin"].includes(role) ? role : "Student");
 
 const serializeDemoUser = (user, expiresAt) => {
   const data = user.toObject ? user.toObject() : user;
@@ -27,21 +27,15 @@ const serializeDemoUser = (user, expiresAt) => {
   };
 };
 
-exports.startDemo = async (_req, res) => {
+exports.startDemo = async (req, res) => {
   try {
-    if (!isDemoDatabaseRuntime() && !parseBoolean(process.env.ALLOW_DEMO_ON_PRIMARY_DB)) {
-      return res.status(503).json({
-        success: false,
-        message:
-          "Demo mode is not configured for this API. Set USE_DEMO_DB=true with MONGODB_DEMO_URL, or explicitly allow primary-DB demo testing.",
-      });
-    }
-
     if (!process.env.JWT_SECRET) {
       return res.status(500).json({ success: false, message: "JWT secret is not configured" });
     }
 
-    const demoUser = await User.findOne({ email: DEMO_STUDENT_EMAIL.toLowerCase(), active: { $ne: false } })
+    const role = normalizeDemoRole(req.body?.role);
+    const demoEmail = DEMO_ROLE_EMAILS[role].toLowerCase();
+    const demoUser = await User.findOne({ email: demoEmail, role, active: { $ne: false } })
       .select("-password")
       .populate("additionalDetails")
       .populate("facultyProfile");
@@ -60,7 +54,7 @@ exports.startDemo = async (_req, res) => {
     );
     const expiresAt = new Date(Date.now() + DEMO_SESSION_SECONDS * 1000).toISOString();
 
-    res.cookie("token", token, {
+    res.cookie("demoToken", token, {
       ...getAuthCookieOptions(),
       maxAge: DEMO_SESSION_SECONDS * 1000,
     });
@@ -89,7 +83,7 @@ exports.getDemoStatus = (req, res) =>
   });
 
 exports.exitDemo = (_req, res) => {
-  res.clearCookie("token", getClearAuthCookieOptions());
+  res.clearCookie("demoToken", getClearAuthCookieOptions());
   return res.status(200).json({ success: true, message: "Demo mode ended" });
 };
 
@@ -106,14 +100,15 @@ exports.createAccessRequest = async (req, res) => {
       });
     }
 
-    const accessRequest = await AccessRequest.create({
+    const accessRequest = await runWithDataScope(DATA_SCOPES.PRODUCTION, () => AccessRequest.create({
       name: name.trim(),
       email: normalizedEmail,
       college: college.trim(),
       role: normalizedRole,
       message,
       source: req.user?.isDemo ? "demo" : "public",
-    });
+      dataScope: DATA_SCOPES.PRODUCTION,
+    }));
 
     return res.status(201).json({
       success: true,

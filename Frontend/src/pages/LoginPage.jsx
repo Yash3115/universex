@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { login, startDemoSession } from "../features/auth/authSlice";
+import { login } from "../features/auth/authSlice";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -46,12 +46,7 @@ const Login = () => {
     dispatch(login(formData));
   };
 
-  const handleTryDemo = async () => {
-    const result = await dispatch(startDemoSession());
-    if (startDemoSession.fulfilled.match(result)) {
-      navigate("/dashboard?demo=true");
-    }
-  };
+  const handleTryDemo = () => navigate("/demo");
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-white p-4">

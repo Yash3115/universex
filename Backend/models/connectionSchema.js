@@ -34,8 +34,8 @@ connectionSchema.pre("validate", function setPairKey(next) {
   next();
 });
 
-connectionSchema.index({ requester: 1, recipient: 1 }, { unique: true });
-connectionSchema.index({ pairKey: 1 }, { unique: true, sparse: true });
+connectionSchema.index({ dataScope: 1, requester: 1, recipient: 1 }, { unique: true });
+connectionSchema.index({ dataScope: 1, pairKey: 1 }, { unique: true, sparse: true });
 connectionSchema.index({ recipient: 1, status: 1 });
 connectionSchema.index({ requester: 1, status: 1 });
 connectionSchema.index({ status: 1, updatedAt: -1 });

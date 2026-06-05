@@ -13,7 +13,7 @@ const courseAttendanceRecordSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-courseAttendanceRecordSchema.index({ session: 1, student: 1 }, { unique: true });
+courseAttendanceRecordSchema.index({ dataScope: 1, session: 1, student: 1 }, { unique: true });
 courseAttendanceRecordSchema.index({ course: 1, student: 1 });
 courseAttendanceRecordSchema.index({ student: 1, markedAt: -1 });
 

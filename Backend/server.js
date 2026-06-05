@@ -1,4 +1,5 @@
 require("dotenv").config();
+require("./utils/registerDataScopePlugin");
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -6,6 +7,7 @@ const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const fileUpload = require("express-fileupload");
+const { dataScopeMiddleware } = require("./utils/dataScope");
 
 // Import Database Connection
 const connectDB = require("./config/db");
@@ -78,6 +80,7 @@ app.options("*", cors(corsoptions));
 
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
 app.use(cookieParser());
+app.use(dataScopeMiddleware);
 
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,

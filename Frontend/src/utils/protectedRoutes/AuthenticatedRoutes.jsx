@@ -12,10 +12,11 @@ const AuthenticatedRoutes = ({ children }) => {
     if (!loading) {
       if (!isAuthenticated) {
         const demoExpired = window.localStorage.getItem("universexDemoSessionExpired") === "true";
+        const demoMode = window.localStorage.getItem("universexDemoSession") === "true";
         if (demoExpired) {
           window.localStorage.removeItem("universexDemoSessionExpired");
         }
-        navigate(demoExpired ? "/" : "/login", { replace: true });
+        navigate(demoExpired || demoMode ? "/demo" : "/login", { replace: true });
       } else if (
         user &&
         (user.mustChangePassword || user.profileCompletionRequired) &&

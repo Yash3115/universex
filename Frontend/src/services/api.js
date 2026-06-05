@@ -8,4 +8,12 @@ const api = axios.create({
   withCredentials: true,
 });
 
+api.interceptors.request.use((config) => {
+  if (window.localStorage.getItem("universexDemoSession") === "true") {
+    config.headers = config.headers || {};
+    config.headers["X-UniVerseX-Mode"] = "demo";
+  }
+  return config;
+});
+
 export default api;

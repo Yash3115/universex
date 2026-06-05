@@ -1,11 +1,12 @@
 const User = require('../models/userSchema');
 const jwt = require('jsonwebtoken');
+const { isDemoScope } = require("../utils/dataScope");
 
 const getRequestToken = (req) => {
     const bearerToken = req.headers.authorization?.startsWith("Bearer ")
         ? req.headers.authorization.split(" ")[1]
         : null;
-    return req.cookies?.token || bearerToken;
+    return isDemoScope() ? req.cookies?.demoToken || bearerToken : req.cookies?.token || bearerToken;
 };
 
 const attachUserFromToken = async (req, token) => {
@@ -14,6 +15,11 @@ const attachUserFromToken = async (req, token) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    if (isDemoScope() !== Boolean(decoded.isDemo)) {
+        throw new Error("Token scope mismatch");
+    }
+
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user) {
@@ -76,4 +82,17 @@ const requireNonDemo = (req, res, next) => {
     next();
 };
 
-module.exports = { authMiddleware, optionalAuthMiddleware, isAuthorised, requireNonDemo };
+const hasUploadedFiles = (files = {}) =>
+    Object.values(files || {}).some((file) => (Array.isArray(file) ? file.length > 0 : Boolean(file)));
+
+const blockDemoFileUploads = (req, res, next) => {
+    if (req.user?.isDemo && hasUploadedFiles(req.files)) {
+        return res.status(403).json({
+            success: false,
+            message: "File uploads are disabled in demo mode",
+        });
+    }
+    next();
+};
+
+module.exports = { authMiddleware, optionalAuthMiddleware, isAuthorised, requireNonDemo, blockDemoFileUploads };

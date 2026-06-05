@@ -44,7 +44,7 @@ router.post("/changepassword", authMiddleware, requireNonDemo, changePassword)
 router.post("/complete-onboarding", authMiddleware, requireNonDemo, completeOnboarding)
 
 // Admin-managed account provisioning
-router.get("/admin/accounts", authMiddleware, requireNonDemo, isAuthorised("Admin"), listManagedAccounts)
+router.get("/admin/accounts", authMiddleware, isAuthorised("Admin"), listManagedAccounts)
 router.post("/admin/accounts", authMiddleware, requireNonDemo, isAuthorised("Admin"), createManagedAccount)
 
 // Route for session persistance

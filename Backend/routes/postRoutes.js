@@ -15,12 +15,12 @@ const {
     deleteComment 
 } = require("../controllers/commentController");
 
-const { authMiddleware } = require("../middlewares/authMiddleware");
+const { authMiddleware, blockDemoFileUploads } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
 // 📌 Post Routes
-router.post("/", authMiddleware, createPost);
+router.post("/", authMiddleware, blockDemoFileUploads, createPost);
 router.get("/", getPosts);
 router.put("/:id/like", authMiddleware, likePost);
 router.put("/:id/save", authMiddleware, savePost);

@@ -1,6 +1,5 @@
-import { useDispatch, useSelector } from "react-redux";
+import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { startDemoSession } from "../features/auth/authSlice";
 
 const features = [
   {
@@ -23,7 +22,6 @@ const features = [
 
 const Landing = () => {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const authLoading = useSelector((state) => state.auth.loading);
 
@@ -31,16 +29,13 @@ const Landing = () => {
     navigate(isAuthenticated ? "/dashboard" : "/login");
   };
 
-  const handleTryDemo = async () => {
+  const handleTryDemo = () => {
     if (isAuthenticated) {
       navigate("/dashboard");
       return;
     }
 
-    const result = await dispatch(startDemoSession());
-    if (startDemoSession.fulfilled.match(result)) {
-      navigate("/dashboard?demo=true");
-    }
+    navigate("/demo");
   };
 
   const handleLearnMore = () => {

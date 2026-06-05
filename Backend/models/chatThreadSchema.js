@@ -13,11 +13,11 @@ const chatThreadSchema = new mongoose.Schema(
 );
 
 chatThreadSchema.index(
-  { type: 1, pairKey: 1 },
+  { dataScope: 1, type: 1, pairKey: 1 },
   { unique: true, partialFilterExpression: { type: "direct", pairKey: { $type: "string" } } }
 );
 chatThreadSchema.index(
-  { type: 1, department: 1 },
+  { dataScope: 1, type: 1, department: 1 },
   { unique: true, partialFilterExpression: { type: "department", department: { $type: "string" } } }
 );
 chatThreadSchema.index({ participants: 1, updatedAt: -1 });

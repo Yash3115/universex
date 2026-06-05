@@ -16,7 +16,7 @@ const facultyProfileSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-facultyProfileSchema.index({ user: 1 }, { unique: true, sparse: true });
+facultyProfileSchema.index({ dataScope: 1, user: 1 }, { unique: true, sparse: true });
 facultyProfileSchema.index({ department: 1 });
 
 module.exports = mongoose.model("FacultyProfile", facultyProfileSchema);

@@ -13,7 +13,7 @@ const officeHourBookingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-officeHourBookingSchema.index({ slot: 1, student: 1 }, { unique: true });
+officeHourBookingSchema.index({ dataScope: 1, slot: 1, student: 1 }, { unique: true });
 officeHourBookingSchema.index({ professor: 1, status: 1, createdAt: -1 });
 officeHourBookingSchema.index({ student: 1, status: 1, createdAt: -1 });
 

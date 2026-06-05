@@ -33,6 +33,7 @@ const ChatPage = lazy(() => import("./pages/ChatPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const AdminAccountsPage = lazy(() => import("./pages/AdminAccountsPage"));
 const RequestAccessPage = lazy(() => import("./pages/RequestAccessPage"));
+const DemoPage = lazy(() => import("./pages/DemoPage"));
 
 const PageLoader = () => (
   <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
@@ -60,6 +61,7 @@ const App = () => {
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/demo" element={<DemoPage />} />
           <Route path="/request-access" element={<RequestAccessPage />} />
           <Route
             path="/signup"
@@ -249,7 +251,7 @@ const App = () => {
             path="/admin/accounts"
             element={
               <AuthenticatedRoutes>
-                {user?.role === "Admin" && !user?.isDemo ? <AdminAccountsPage /> : <Dashboard />}
+                {user?.role === "Admin" ? <AdminAccountsPage /> : <Dashboard />}
               </AuthenticatedRoutes>
             }
           />

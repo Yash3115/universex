@@ -28,6 +28,7 @@ export const login = createAsyncThunk(
   "auth/login",
   async (data, { rejectWithValue }) => {
     try {
+      clearDemoSession();
       const response = await api.post(
         "/api/users/login",
         data,
@@ -36,7 +37,6 @@ export const login = createAsyncThunk(
           headers: { "Content-Type": "application/json" },
         }
       );
-      clearDemoSession();
       return response.data;
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
@@ -136,11 +136,11 @@ export const updateProfile = createAsyncThunk(
 
 export const startDemoSession = createAsyncThunk(
   "auth/startDemoSession",
-  async (_, { rejectWithValue }) => {
+  async (role = "Student", { rejectWithValue }) => {
     try {
       const response = await api.post(
         "/api/demo/start",
-        {},
+        { role },
         {
           withCredentials: true,
           headers: { "Content-Type": "application/json" },
@@ -170,7 +170,12 @@ export const exitDemoSession = createAsyncThunk(
       );
       toast.success(response.data.message || "Demo mode ended");
       clearDemoSession();
-      return response.data;
+      try {
+        const sessionResponse = await api.get("/api/users/getUser", { withCredentials: true });
+        return { ...response.data, restoredUser: sessionResponse.data.user || null };
+      } catch (_error) {
+        return { ...response.data, restoredUser: null };
+      }
     } catch (error) {
       toast.error(error.response?.data?.message || "Unable to exit demo mode");
       return rejectWithValue(error.response?.data);
@@ -283,10 +288,10 @@ const authSlice = createSlice({
         state.loading = false;
         state.error = action.payload || "Unable to start demo mode";
       })
-      .addCase(exitDemoSession.fulfilled, (state) => {
+      .addCase(exitDemoSession.fulfilled, (state, action) => {
         state.loading = false;
-        state.isAuthenticated = false;
-        state.user = null;
+        state.isAuthenticated = Boolean(action.payload?.restoredUser);
+        state.user = action.payload?.restoredUser || null;
       })
       .addCase(updateProfileImage.pending, (state) => {
         state.error = null;

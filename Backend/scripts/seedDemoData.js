@@ -1,9 +1,8 @@
-process.env.USE_DEMO_DB = "true";
-
 const mongoose = require("mongoose");
+const { DATA_SCOPES } = require("../utils/dataScope");
 const { seedDummyUsers } = require("./seedDummyUsers");
 
-seedDummyUsers()
+seedDummyUsers({ dataScope: DATA_SCOPES.DEMO })
   .catch((error) => {
     console.error("Failed to seed demo data:", error.message);
     process.exitCode = 1;

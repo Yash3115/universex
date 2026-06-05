@@ -4,30 +4,33 @@ const dotenv = require("dotenv");
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-process.env.USE_DEMO_DB = "true";
-
+const { DATA_SCOPES } = require("../utils/dataScope");
 const { seedDummyUsers } = require("./seedDummyUsers");
 
+const DEMO_DELETE_FILTER = Object.freeze({ dataScope: DATA_SCOPES.DEMO });
+
 const resetDemoData = async () => {
-  const demoUrl = process.env.MONGODB_DEMO_URL;
-  const primaryUrl = process.env.MONGODB_URL;
-
-  if (!demoUrl) {
-    throw new Error("MONGODB_DEMO_URL is not configured. Refusing to reset demo data.");
+  if (!process.env.MONGODB_URL) {
+    throw new Error("MONGODB_URL is not configured. Refusing to reset demo data.");
   }
 
-  if (primaryUrl && demoUrl === primaryUrl && process.env.ALLOW_DEMO_RESET_ON_PRIMARY !== "true") {
-    throw new Error(
-      "MONGODB_DEMO_URL matches MONGODB_URL. Refusing to drop the primary database without ALLOW_DEMO_RESET_ON_PRIMARY=true."
-    );
+  await mongoose.connect(process.env.MONGODB_URL);
+
+  const collections = Object.values(mongoose.connection.collections);
+  for (const collection of collections) {
+    const filter = { ...DEMO_DELETE_FILTER };
+    if (filter.dataScope !== DATA_SCOPES.DEMO || Object.keys(filter).length !== 1) {
+      throw new Error(`Unsafe demo reset filter for ${collection.collectionName}`);
+    }
+
+    const result = await collection.deleteMany(filter);
+    if (result.deletedCount) {
+      console.log(`Deleted ${result.deletedCount} demo records from ${collection.collectionName}`);
+    }
   }
 
-  await mongoose.connect(demoUrl);
-  await mongoose.connection.dropDatabase();
-  console.log("Demo database dropped.");
   await mongoose.disconnect();
-
-  await seedDummyUsers();
+  await seedDummyUsers({ dataScope: DATA_SCOPES.DEMO });
 };
 
 resetDemoData()

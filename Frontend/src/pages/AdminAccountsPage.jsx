@@ -67,6 +67,7 @@ const AdminAccountsPage = () => {
   const [formData, setFormData] = useState(emptyForm);
   const [filters, setFilters] = useState({ search: "", role: "", onboarding: "" });
   const [query, setQuery] = useState(filters);
+  const isDemoAdmin = Boolean(user?.isDemo);
 
   useEffect(() => {
     if (user && user.role !== "Admin") {
@@ -119,6 +120,11 @@ const AdminAccountsPage = () => {
 
   const handleCreateAccount = async (event) => {
     event.preventDefault();
+
+    if (isDemoAdmin) {
+      toast.info("Demo admin can view demo accounts but cannot create accounts.");
+      return;
+    }
 
     if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || !formData.college.trim()) {
       toast.error("First name, last name, email, and college are required.");
@@ -209,9 +215,17 @@ const AdminAccountsPage = () => {
               </span>
               <div>
                 <h2 className="text-xl font-black text-slate-950">New account</h2>
-                <p className="text-sm text-slate-500">Student or professor only</p>
+                <p className="text-sm text-slate-500">
+                  {isDemoAdmin ? "Disabled in demo mode" : "Student or professor only"}
+                </p>
               </div>
             </div>
+
+            {isDemoAdmin && (
+              <p className="mt-5 rounded-xl bg-amber-50 p-3 text-sm font-semibold text-amber-800">
+                Demo admin is read-only. Real account creation is available only outside demo mode.
+              </p>
+            )}
 
             <form className="mt-5 space-y-4" onSubmit={handleCreateAccount}>
               <label className="block">
@@ -348,9 +362,9 @@ const AdminAccountsPage = () => {
               <button
                 type="submit"
                 className="btn btn-primary w-full rounded-xl"
-                disabled={createStatus === "loading"}
+                disabled={isDemoAdmin || createStatus === "loading"}
               >
-                {createStatus === "loading" ? "Creating..." : "Create account"}
+                {isDemoAdmin ? "Creation disabled in demo" : createStatus === "loading" ? "Creating..." : "Create account"}
               </button>
               {createError && (
                 <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">

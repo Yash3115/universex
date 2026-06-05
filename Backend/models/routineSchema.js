@@ -19,10 +19,12 @@ const routineEntrySchema = new mongoose.Schema(
 
 const routineSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, unique: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     entries: [routineEntrySchema],
   },
   { timestamps: true }
 );
+
+routineSchema.index({ dataScope: 1, user: 1 }, { unique: true });
 
 module.exports = mongoose.model("Routine", routineSchema);

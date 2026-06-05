@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { logout } from "../features/auth/authSlice";
+import { exitDemoSession, logout } from "../features/auth/authSlice";
 import { FiMenu } from "react-icons/fi";
 import { AiOutlineClose } from "react-icons/ai";
 import NotificationBell from "./NotificationBell";
@@ -45,7 +45,7 @@ const Navbar = () => {
   };
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(user?.isDemo ? exitDemoSession() : logout());
     navigate("/");
     closeDropdown();
     closeMobileMenu();
@@ -60,7 +60,7 @@ const Navbar = () => {
     { name: "Students", route: "/students" },
     { name: "Budget", route: "/budget" },
     { name: "Profile", route: "/profile" },
-    ...(user?.role === "Admin" && !user?.isDemo ? [{ name: "Accounts", route: "/admin/accounts" }] : []),
+    ...(user?.role === "Admin" ? [{ name: "Accounts", route: "/admin/accounts" }] : []),
   ];
 
   const getLinkClass = (route) =>
@@ -156,7 +156,7 @@ const Navbar = () => {
                 >
                   Edit profile
                 </li>
-                {user?.role === "Admin" && !user?.isDemo && (
+                {user?.role === "Admin" && (
                   <li
                     onClick={() => {
                       navigate("/admin/accounts");

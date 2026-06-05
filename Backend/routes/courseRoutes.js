@@ -18,7 +18,7 @@ const {
   updateCourse,
   updateEnrollment,
 } = require("../controllers/courseController");
-const { authMiddleware } = require("../middlewares/authMiddleware");
+const { authMiddleware, blockDemoFileUploads } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
@@ -30,7 +30,7 @@ router.get("/:id", getCourseById);
 router.put("/:id", updateCourse);
 router.post("/:id/join", joinCourse);
 router.patch("/:id/enrollments/:studentId", updateEnrollment);
-router.post("/:courseId/materials", createCourseMaterial);
+router.post("/:courseId/materials", blockDemoFileUploads, createCourseMaterial);
 router.get("/:courseId/materials", getCourseMaterials);
 router.delete("/:courseId/materials/:materialId", deleteCourseMaterial);
 router.post("/:courseId/announcements", createCourseAnnouncement);
