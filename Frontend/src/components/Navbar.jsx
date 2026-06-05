@@ -60,7 +60,7 @@ const Navbar = () => {
     { name: "Students", route: "/students" },
     { name: "Budget", route: "/budget" },
     { name: "Profile", route: "/profile" },
-    ...(user?.role === "Admin" ? [{ name: "Accounts", route: "/admin/accounts" }] : []),
+    ...(user?.role === "Admin" && !user?.isDemo ? [{ name: "Accounts", route: "/admin/accounts" }] : []),
   ];
 
   const getLinkClass = (route) =>
@@ -113,11 +113,21 @@ const Navbar = () => {
               <span className="hidden max-w-24 truncate text-sm font-semibold text-gray-700 sm:block">
                 {userData.userName}
               </span>
+              {user?.isDemo && (
+                <span className="hidden rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-800 sm:inline-flex">
+                  Demo
+                </span>
+              )}
             </button>
             {isDropdownOpen && (
               <ul className="absolute right-0 z-50 mt-3 w-56 overflow-hidden rounded-2xl border border-gray-100 bg-white p-2 shadow-xl">
-                <li className="px-3 py-2 text-sm font-bold text-gray-800">
-                  {userData.userName}
+                <li className="px-3 py-2">
+                  <p className="text-sm font-bold text-gray-800">{userData.userName}</p>
+                  {user?.isDemo && (
+                    <p className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase text-amber-800">
+                      Demo account
+                    </p>
+                  )}
                 </li>
                 <li
                   onClick={() => {
@@ -146,7 +156,7 @@ const Navbar = () => {
                 >
                   Edit profile
                 </li>
-                {user?.role === "Admin" && (
+                {user?.role === "Admin" && !user?.isDemo && (
                   <li
                     onClick={() => {
                       navigate("/admin/accounts");

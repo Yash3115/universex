@@ -11,7 +11,11 @@ const AuthenticatedRoutes = ({ children }) => {
   useEffect(() => {
     if (!loading) {
       if (!isAuthenticated) {
-        navigate("/login", { replace: true });
+        const demoExpired = window.localStorage.getItem("universexDemoSessionExpired") === "true";
+        if (demoExpired) {
+          window.localStorage.removeItem("universexDemoSessionExpired");
+        }
+        navigate(demoExpired ? "/" : "/login", { replace: true });
       } else if (
         user &&
         (user.mustChangePassword || user.profileCompletionRequired) &&

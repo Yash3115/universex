@@ -20,7 +20,7 @@ const {
   resetPassword,
 } = require("../controllers/ResetPassword")
 
-const { authMiddleware, isAuthorised } = require("../middlewares/authMiddleware")
+const { authMiddleware, isAuthorised, requireNonDemo } = require("../middlewares/authMiddleware")
 
 // Routes for Login, Signup, and Authentication
 
@@ -38,14 +38,14 @@ router.post("/signup", signup)
 router.post("/sendotp", sendotp)
 
 // Route for Changing the password
-router.post("/changepassword", authMiddleware, changePassword)
+router.post("/changepassword", authMiddleware, requireNonDemo, changePassword)
 
 // Route for completing admin-provisioned first-login setup
-router.post("/complete-onboarding", authMiddleware, completeOnboarding)
+router.post("/complete-onboarding", authMiddleware, requireNonDemo, completeOnboarding)
 
 // Admin-managed account provisioning
-router.get("/admin/accounts", authMiddleware, isAuthorised("Admin"), listManagedAccounts)
-router.post("/admin/accounts", authMiddleware, isAuthorised("Admin"), createManagedAccount)
+router.get("/admin/accounts", authMiddleware, requireNonDemo, isAuthorised("Admin"), listManagedAccounts)
+router.post("/admin/accounts", authMiddleware, requireNonDemo, isAuthorised("Admin"), createManagedAccount)
 
 // Route for session persistance
 router.get("/getUser", authMiddleware, getUser);

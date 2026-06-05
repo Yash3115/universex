@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect } from "react";
-import { useDispatch } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { getUser } from "./features/auth/authSlice";
 import Navbar from "./components/Navbar";
+import DemoBanner from "./components/DemoBanner";
 import { ToastContainer } from "react-toastify";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import UnAuthenticatedRoutes from "./utils/protectedRoutes/UnAuthenticatedRoutes";
@@ -31,6 +32,7 @@ const OfficeHoursPage = lazy(() => import("./pages/OfficeHoursPage"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const OnboardingPage = lazy(() => import("./pages/OnboardingPage"));
 const AdminAccountsPage = lazy(() => import("./pages/AdminAccountsPage"));
+const RequestAccessPage = lazy(() => import("./pages/RequestAccessPage"));
 
 const PageLoader = () => (
   <div className="flex min-h-[70vh] items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
@@ -43,6 +45,7 @@ const PageLoader = () => (
 
 const App = () => {
   const dispatch = useDispatch();
+  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     dispatch(getUser());
@@ -53,9 +56,11 @@ const App = () => {
     <BrowserRouter>
       <ToastContainer />
       <Navbar />
+      <DemoBanner />
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/request-access" element={<RequestAccessPage />} />
           <Route
             path="/signup"
             element={
@@ -244,7 +249,7 @@ const App = () => {
             path="/admin/accounts"
             element={
               <AuthenticatedRoutes>
-                <AdminAccountsPage />
+                {user?.role === "Admin" && !user?.isDemo ? <AdminAccountsPage /> : <Dashboard />}
               </AuthenticatedRoutes>
             }
           />

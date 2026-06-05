@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AiOutlineEye, AiOutlineEyeInvisible } from "react-icons/ai";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import { login } from "../features/auth/authSlice";
+import { login, startDemoSession } from "../features/auth/authSlice";
 
 const Login = () => {
   const dispatch = useDispatch();
@@ -12,6 +12,7 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const user = useSelector((state) => state.auth.user);
+  const loading = useSelector((state) => state.auth.loading);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -43,6 +44,13 @@ const Login = () => {
     }
 
     dispatch(login(formData));
+  };
+
+  const handleTryDemo = async () => {
+    const result = await dispatch(startDemoSession());
+    if (startDemoSession.fulfilled.match(result)) {
+      navigate("/dashboard?demo=true");
+    }
   };
 
   return (
@@ -112,13 +120,29 @@ const Login = () => {
             </div>
             <button
               type="submit"
-              className="mt-4 w-full rounded-lg bg-blue-600 p-3 font-semibold text-white hover:bg-blue-700"
+              className="mt-4 w-full rounded-lg bg-blue-600 p-3 font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={loading}
             >
               Login
             </button>
           </form>
+          <button
+            type="button"
+            className="mt-3 w-full rounded-lg border border-blue-200 bg-blue-50 p-3 font-semibold text-blue-700 transition hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+            onClick={handleTryDemo}
+            disabled={loading}
+          >
+            Try Demo
+          </button>
           <p className="mt-4 text-center text-sm leading-6 text-gray-600">
-            Need access? Ask your admin to create your student or professor account.
+            Need access?{" "}
+            <button
+              type="button"
+              className="font-bold text-blue-700 hover:underline"
+              onClick={() => navigate("/request-access")}
+            >
+              Request a student or professor account.
+            </button>
           </p>
         </div>
       </section>

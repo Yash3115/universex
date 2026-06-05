@@ -3,9 +3,18 @@ const mailSender = require("../utils/mailSender");
 const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 
+const isDemoEmail = (email = "") => String(email).trim().toLowerCase().endsWith("@universex.demo");
+
 exports.resetPasswordToken = async (req, res) => {
 	try {
-		const email = req.body.email;
+		const email = req.body.email?.trim().toLowerCase();
+		if (isDemoEmail(email)) {
+			return res.status(403).json({
+				success: false,
+				message: "Demo accounts cannot use password reset",
+			});
+		}
+
 		const user = await User.findOne({ email: email });
 		if (!user) {
 			return res.json({
@@ -61,6 +70,12 @@ exports.resetPassword = async (req, res) => {
 			return res.json({
 				success: false,
 				message: "Token is Invalid",
+			});
+		}
+		if (isDemoEmail(userDetails.email)) {
+			return res.status(403).json({
+				success: false,
+				message: "Demo accounts cannot use password reset",
 			});
 		}
 		if (!(userDetails.resetPasswordExpires > Date.now())) {

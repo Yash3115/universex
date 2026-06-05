@@ -22,6 +22,13 @@ const SignUp = () => {
           <button
             type="button"
             className="btn btn-primary rounded-xl"
+            onClick={() => navigate("/request-access")}
+          >
+            Request access
+          </button>
+          <button
+            type="button"
+            className="btn rounded-xl bg-white"
             onClick={() => navigate("/login")}
           >
             Go to login

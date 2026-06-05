@@ -17,6 +17,7 @@ const ProfileImageUploader = () => {
 
   // Handle File Selection
   const onFileChange = (event) => {
+    if (user?.isDemo) return;
     const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
@@ -72,12 +73,24 @@ const ProfileImageUploader = () => {
         ref={fileInputRef}
         onChange={onFileChange}
       />
-      <button type="button" className="btn btn-primary" onClick={() => fileInputRef.current.click()}>
+      <button
+        type="button"
+        className="btn btn-primary disabled:cursor-not-allowed disabled:opacity-60"
+        onClick={() => {
+          if (!user?.isDemo) fileInputRef.current.click();
+        }}
+        disabled={user?.isDemo}
+      >
         Upload Image
       </button>
+      {user?.isDemo && (
+        <p className="max-w-xs text-center text-xs font-semibold text-amber-700">
+          Image uploads are disabled in demo mode.
+        </p>
+      )}
 
       {/* Cropping Modal */}
-      {image && (
+      {image && !user?.isDemo && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
           <div className="bg-white p-4 rounded-lg shadow-lg w-96">
             <h2 className="text-lg font-bold mb-2">Adjust Image</h2>

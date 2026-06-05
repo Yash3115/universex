@@ -2,6 +2,27 @@ import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import api from "../../services/api";
 import { toast } from "react-toastify";
 
+const DEMO_SESSION_STORAGE_KEY = "universexDemoSession";
+const DEMO_SESSION_EXPIRED_KEY = "universexDemoSessionExpired";
+
+const rememberDemoSession = () => {
+  window.localStorage.setItem(DEMO_SESSION_STORAGE_KEY, "true");
+  window.localStorage.removeItem(DEMO_SESSION_EXPIRED_KEY);
+};
+
+const clearDemoSession = () => {
+  window.localStorage.removeItem(DEMO_SESSION_STORAGE_KEY);
+  window.localStorage.removeItem(DEMO_SESSION_EXPIRED_KEY);
+};
+
+const markExpiredDemoSession = () => {
+  if (window.localStorage.getItem(DEMO_SESSION_STORAGE_KEY) === "true") {
+    window.localStorage.removeItem(DEMO_SESSION_STORAGE_KEY);
+    window.localStorage.setItem(DEMO_SESSION_EXPIRED_KEY, "true");
+    toast.info("Demo session expired. Start a new demo anytime.");
+  }
+};
+
 // LOGIN
 export const login = createAsyncThunk(
   "auth/login",
@@ -15,6 +36,7 @@ export const login = createAsyncThunk(
           headers: { "Content-Type": "application/json" },
         }
       );
+      clearDemoSession();
       return response.data;
     } catch (error) {
       toast.error(error.response?.data?.message || "Login failed");
@@ -36,6 +58,7 @@ export const getUser = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
+      markExpiredDemoSession();
       return rejectWithValue(error.response?.data);
     }
   }
@@ -53,6 +76,7 @@ export const logout = createAsyncThunk(
         }
       );
       toast.success(response.data.message);
+      clearDemoSession();
       return response.data;
     } catch (error) {
       toast.error(error.response?.data?.message || "Logout failed");
@@ -110,6 +134,71 @@ export const updateProfile = createAsyncThunk(
   }
 );
 
+export const startDemoSession = createAsyncThunk(
+  "auth/startDemoSession",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.post(
+        "/api/demo/start",
+        {},
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      toast.success(response.data.message || "Demo mode started");
+      rememberDemoSession();
+      return response.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to start demo mode");
+      return rejectWithValue(error.response?.data);
+    }
+  }
+);
+
+export const exitDemoSession = createAsyncThunk(
+  "auth/exitDemoSession",
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await api.post(
+        "/api/demo/exit",
+        {},
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      toast.success(response.data.message || "Demo mode ended");
+      clearDemoSession();
+      return response.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to exit demo mode");
+      return rejectWithValue(error.response?.data);
+    }
+  }
+);
+
+export const submitAccessRequest = createAsyncThunk(
+  "auth/submitAccessRequest",
+  async (data, { rejectWithValue }) => {
+    try {
+      const response = await api.post(
+        "/api/demo/access-request",
+        data,
+        {
+          withCredentials: true,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+      toast.success(response.data.message || "Access request submitted");
+      return response.data;
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to submit access request");
+      return rejectWithValue(error.response?.data);
+    }
+  }
+);
+
 export const completeOnboarding = createAsyncThunk(
   "auth/completeOnboarding",
   async (data, { rejectWithValue }) => {
@@ -130,6 +219,15 @@ export const completeOnboarding = createAsyncThunk(
     }
   }
 );
+
+const mergeSessionUser = (currentUser, nextUser) => {
+  if (!nextUser) return currentUser;
+  return {
+    ...nextUser,
+    isDemo: nextUser.isDemo ?? currentUser?.isDemo ?? false,
+    demoExpiresAt: nextUser.demoExpiresAt ?? currentUser?.demoExpiresAt ?? null,
+  };
+};
 
 const authSlice = createSlice({
   name: "auth",
@@ -172,11 +270,29 @@ const authSlice = createSlice({
         state.isAuthenticated = false;
         state.user = null;
       })
+      .addCase(startDemoSession.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(startDemoSession.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = mergeSessionUser(state.user, action.payload.user);
+      })
+      .addCase(startDemoSession.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "Unable to start demo mode";
+      })
+      .addCase(exitDemoSession.fulfilled, (state) => {
+        state.loading = false;
+        state.isAuthenticated = false;
+        state.user = null;
+      })
       .addCase(updateProfileImage.pending, (state) => {
         state.error = null;
       })
       .addCase(updateProfileImage.fulfilled, (state, action) => {
-        state.user = action.payload.data || state.user;
+        state.user = mergeSessionUser(state.user, action.payload.data);
       })
       .addCase(updateProfileImage.rejected, (state, action) => {
         state.error =
@@ -186,7 +302,7 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
-        state.user = action.payload.user || action.payload.updatedUserDetails || state.user;
+        state.user = mergeSessionUser(state.user, action.payload.user || action.payload.updatedUserDetails);
         if (state.user && action.payload.data) {
           state.user.additionalDetails = action.payload.data;
         }

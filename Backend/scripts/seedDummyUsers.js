@@ -26,6 +26,13 @@ const DEFAULT_IMAGE = {
   format: "svg",
 };
 
+const parseBoolean = (value) => String(value).toLowerCase() === "true";
+
+const shouldUseDemoDatabase = () =>
+  parseBoolean(process.env.USE_DEMO_DB) ||
+  parseBoolean(process.env.DEMO_DATABASE_ENABLED) ||
+  process.env.NODE_ENV === "demo";
+
 const daysFromNow = (days) => {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -572,11 +579,17 @@ const dummyChats = [
 ];
 
 const connectDatabase = async () => {
-  if (!process.env.MONGODB_URL) {
-    throw new Error("MONGODB_URL is not configured. Add it to Backend/.env first.");
+  const useDemoDb = shouldUseDemoDatabase();
+  const mongoUrl = useDemoDb ? process.env.MONGODB_DEMO_URL : process.env.MONGODB_URL;
+
+  if (!mongoUrl) {
+    throw new Error(
+      `${useDemoDb ? "MONGODB_DEMO_URL" : "MONGODB_URL"} is not configured. Add it to Backend/.env first.`
+    );
   }
 
-  await mongoose.connect(process.env.MONGODB_URL);
+  await mongoose.connect(mongoUrl);
+  console.log(`Using ${useDemoDb ? "demo" : "primary"} database for seed data.`);
 };
 
 const upsertDummyUser = async (userData, hashedPassword, adminUserId) => {
@@ -999,11 +1012,19 @@ const seedDummyUsers = async () => {
   console.log("\nYou can rerun this command anytime; it updates the same demo users, jobs, courses, materials, assignments, results, and chats.\n");
 };
 
-seedDummyUsers()
-  .catch((error) => {
-    console.error("Failed to seed dummy data:", error.message);
-    process.exitCode = 1;
-  })
-  .finally(async () => {
-    await mongoose.disconnect();
-  });
+if (require.main === module) {
+  seedDummyUsers()
+    .catch((error) => {
+      console.error("Failed to seed dummy data:", error.message);
+      process.exitCode = 1;
+    })
+    .finally(async () => {
+      await mongoose.disconnect();
+    });
+}
+
+module.exports = {
+  DEFAULT_PASSWORD,
+  dummyUsers,
+  seedDummyUsers,
+};

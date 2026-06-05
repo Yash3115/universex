@@ -2,6 +2,14 @@ const Profile = require("../models/profileSchema");
 const User = require("../models/userSchema");
 const { deleteImageFromCloudinary, uploadImageToCloudinary } = require("../utils/imageUploader");
 
+const attachSessionFlags = (user, req) => {
+  const data = user?.toObject ? user.toObject() : user;
+  if (!data) return data;
+  data.isDemo = Boolean(req.user?.isDemo);
+  data.demoExpiresAt = req.user?.demoExpiresAt || null;
+  return data;
+};
+
 // Method for updating a profile
 exports.updateProfile = async (req, res) => {
   try {
@@ -43,13 +51,14 @@ exports.updateProfile = async (req, res) => {
     const updatedUserDetails = await User.findById(userId)
       .populate("additionalDetails")
       .exec();
+    const updatedUser = attachSessionFlags(updatedUserDetails, req);
 
     return res.json({
       success: true,
       message: "Profile updated successfully",
-      data: updatedUserDetails.additionalDetails,
-      user: updatedUserDetails,
-      updatedUserDetails,
+      data: updatedUser.additionalDetails,
+      user: updatedUser,
+      updatedUserDetails: updatedUser,
     });
   } catch (error) {
     console.error("Error updating profile:", error);
@@ -87,11 +96,12 @@ exports.updateDisplayPicture = async (req, res) => {
     user.image = image;
     await user.save();
     const updatedProfile = await User.findById(userId).select("-password").populate("additionalDetails");
+    const updatedUser = attachSessionFlags(updatedProfile, req);
 
     res.send({
       success: true,
       message: "Image Updated successfully",
-      data: updatedProfile,
+      data: updatedUser,
     });
   } catch (error) {
     return res.status(500).json({

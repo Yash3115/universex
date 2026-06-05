@@ -19,6 +19,7 @@ const reactionRoutes = require("./routes/reactionRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
 const userRoutes = require("./routes/userRoutes");
 const profileRoutes = require("./routes/profileRoutes.js");
+const demoRoutes = require("./routes/demoRoutes.js");
 const jobRoutes = require("./routes/jobRoutes.js");
 const transactionRoutes = require("./routes/transactionRoutes.js");
 const academicRoutes = require("./routes/academicRoutes.js");
@@ -95,7 +96,9 @@ app.get("/api/test", (req, res) => {
 app.use("/api/users/login", authRateLimiter);
 app.use("/api/users/sendotp", authRateLimiter);
 app.use("/api/users/signup", authRateLimiter);
+app.use("/api/demo/start", authRateLimiter);
 app.use("/api/users", userRoutes);
+app.use("/api/demo", demoRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/comments", commentRoutes);

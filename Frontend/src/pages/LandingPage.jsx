@@ -1,5 +1,6 @@
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import { startDemoSession } from "../features/auth/authSlice";
 
 const features = [
   {
@@ -22,10 +23,24 @@ const features = [
 
 const Landing = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const authLoading = useSelector((state) => state.auth.loading);
 
   const handleGetStarted = () => {
     navigate(isAuthenticated ? "/dashboard" : "/login");
+  };
+
+  const handleTryDemo = async () => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+      return;
+    }
+
+    const result = await dispatch(startDemoSession());
+    if (startDemoSession.fulfilled.match(result)) {
+      navigate("/dashboard?demo=true");
+    }
   };
 
   const handleLearnMore = () => {
@@ -53,9 +68,23 @@ const Landing = () => {
             spend less time switching tools and more time growing.
           </p>
           <div className="mt-8 flex flex-col gap-4 md:flex-row">
+            {!isAuthenticated && (
+              <button
+                type="button"
+                className="rounded-xl bg-purple-700 px-6 py-3 font-bold text-white shadow-lg shadow-purple-200 transition hover:-translate-y-0.5 hover:bg-purple-800 disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={handleTryDemo}
+                disabled={authLoading}
+              >
+                Try Demo
+              </button>
+            )}
             <button
               type="button"
-              className="rounded-xl bg-purple-700 px-6 py-3 font-bold text-white shadow-lg shadow-purple-200 transition hover:-translate-y-0.5 hover:bg-purple-800"
+              className={`rounded-xl px-6 py-3 font-bold shadow-md transition hover:-translate-y-0.5 ${
+                isAuthenticated
+                  ? "bg-purple-700 text-white shadow-purple-200 hover:bg-purple-800"
+                  : "bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50"
+              }`}
               onClick={handleGetStarted}
             >
               {isAuthenticated ? "Open Dashboard" : "Login"}

@@ -471,7 +471,11 @@ exports.getUser = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    return res.status(200).json({ success: true, user });
+    const userData = user.toObject();
+    userData.isDemo = Boolean(req.user?.isDemo);
+    userData.demoExpiresAt = req.user?.demoExpiresAt || null;
+
+    return res.status(200).json({ success: true, user: userData });
   } catch (error) {
     console.error("Session Error:", error);
     return res.status(500).json({ success: false, message: "Session expired or invalid" });

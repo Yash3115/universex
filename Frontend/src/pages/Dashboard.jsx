@@ -59,7 +59,7 @@ function Dashboard() {
       route: "/students",
       description: "Find peers by college, department, year, and profile details.",
     },
-    ...(user?.role === "Admin"
+    ...(user?.role === "Admin" && !user?.isDemo
       ? [
           {
             name: "Account Management",
