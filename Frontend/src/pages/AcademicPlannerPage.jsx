@@ -98,10 +98,15 @@ const AcademicPlannerPage = () => {
 
   const materialList = useMemo(
     () =>
-      Object.entries(materialsByCourseId).flatMap(([courseId, materials]) => {
-        const course = myCourses.find((item) => item._id === courseId);
-        return (materials || []).map((material) => ({ ...material, course }));
-      }),
+      Object.entries(materialsByCourseId)
+        .flatMap(([courseId, materials]) => {
+          const course = myCourses.find((item) => item._id === courseId);
+          return (materials || []).map((material) => ({ ...material, courseId, course }));
+        })
+        .sort((first, second) => {
+          if (first.pinned !== second.pinned) return first.pinned ? -1 : 1;
+          return new Date(second.publishedAt || second.releaseAt || second.createdAt) - new Date(first.publishedAt || first.releaseAt || first.createdAt);
+        }),
     [materialsByCourseId, myCourses]
   );
 
@@ -350,10 +355,15 @@ const AcademicPlannerPage = () => {
               <h2 className="text-xl font-black text-gray-900">Professor materials</h2>
               <div className="mt-4 space-y-3">
                 {materialList.slice(0, 8).map((material) => (
-                  <a key={material._id} className="block rounded-xl bg-slate-50 p-4 hover:bg-blue-50" href={material.file?.url || material.externalUrl || "#"} target="_blank" rel="noreferrer">
-                    <p className="font-black text-gray-900">{material.title}</p>
-                    <p className="text-sm text-gray-500">{material.course?.code || "Course"} - {material.type}</p>
-                  </a>
+                  <button key={material._id} className="block w-full rounded-xl bg-slate-50 p-4 text-left hover:bg-blue-50" onClick={() => navigate(`/courses/${material.course?._id || material.courseId}`)}>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {material.pinned && <span className="rounded-full bg-amber-50 px-2 py-1 font-bold text-amber-700">Pinned</span>}
+                      {!material.isRead && <span className="rounded-full bg-white px-2 py-1 font-bold text-slate-600">Unread</span>}
+                      <span className="rounded-full bg-blue-50 px-2 py-1 font-bold text-blue-700">{material.type}</span>
+                    </div>
+                    <p className="mt-2 font-black text-gray-900">{material.title}</p>
+                    <p className="text-sm text-gray-500">{material.course?.code || "Course"} {material.week ? `- Week ${material.week}` : ""}</p>
+                  </button>
                 ))}
                 {materialList.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-sm text-gray-500">No materials available yet.</p>}
               </div>

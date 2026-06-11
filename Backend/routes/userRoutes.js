@@ -13,6 +13,8 @@ const {
   logout,
   createManagedAccount,
   listManagedAccounts,
+  listAccessRequests,
+  updateAccessRequestStatus,
   completeOnboarding,
 } = require("../controllers/Auth")
 const {
@@ -46,6 +48,8 @@ router.post("/complete-onboarding", authMiddleware, requireNonDemo, completeOnbo
 // Admin-managed account provisioning
 router.get("/admin/accounts", authMiddleware, isAuthorised("Admin"), listManagedAccounts)
 router.post("/admin/accounts", authMiddleware, requireNonDemo, isAuthorised("Admin"), createManagedAccount)
+router.get("/admin/access-requests", authMiddleware, requireNonDemo, isAuthorised("Admin"), listAccessRequests)
+router.patch("/admin/access-requests/:id", authMiddleware, requireNonDemo, isAuthorised("Admin"), updateAccessRequestStatus)
 
 // Route for session persistance
 router.get("/getUser", authMiddleware, getUser);

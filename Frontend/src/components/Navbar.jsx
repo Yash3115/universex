@@ -51,17 +51,20 @@ const Navbar = () => {
     closeMobileMenu();
   };
 
+  const role = user?.role || "Student";
   const features = [
-    { name: "Community", route: "/community" },
-    { name: "Jobs", route: "/jobs" },
-    { name: "Planner", route: "/class" },
-    { name: "Courses", route: "/courses" },
-    { name: "Chat", route: "/chat" },
-    { name: "Students", route: "/students" },
-    { name: "Budget", route: "/budget" },
-    { name: "Profile", route: "/profile" },
-    ...(user?.role === "Admin" ? [{ name: "Accounts", route: "/admin/accounts" }] : []),
-  ];
+    { name: "Community", route: "/community", roles: ["Student", "Professor", "Admin"] },
+    { name: "Jobs", route: "/jobs", roles: ["Student", "Professor", "Admin"] },
+    { name: "Planner", route: "/class", roles: ["Student"] },
+    { name: "Courses", route: "/courses", roles: ["Student", "Professor", "Admin"] },
+    { name: "Results", route: "/results", roles: ["Student"] },
+    { name: "Office Hours", route: "/office-hours", roles: ["Student", "Professor", "Admin"] },
+    { name: "Chat", route: "/chat", roles: ["Student"] },
+    { name: "Students", route: "/students", roles: ["Student"] },
+    { name: "Budget", route: "/budget", roles: ["Student"] },
+    { name: "Profile", route: "/profile", roles: ["Student", "Professor", "Admin"] },
+    { name: "Accounts", route: "/admin/accounts", roles: ["Admin"] },
+  ].filter((feature) => feature.roles.includes(role));
 
   const getLinkClass = (route) =>
     `cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-all ${

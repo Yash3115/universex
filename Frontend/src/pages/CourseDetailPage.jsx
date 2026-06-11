@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
@@ -16,7 +16,7 @@ import CourseQuestionFormModal from "../components/CourseQuestionFormModal";
 import CourseAnnouncementCard from "../components/CourseAnnouncementCard";
 import CourseAnnouncementFormModal from "../components/CourseAnnouncementFormModal";
 import CourseMaterialCard from "../components/CourseMaterialCard";
-import CourseMaterialUploadModal from "../components/CourseMaterialUploadModal";
+import CourseMaterialEditorModal from "../components/CourseMaterialEditorModal";
 import { fetchCourseAnnouncements, setAnnouncementFilters } from "../features/courseAnnouncements/courseAnnouncementsSlice";
 import { fetchCourseMaterials, setMaterialFilters } from "../features/courseMaterials/courseMaterialsSlice";
 import { clearSelectedCourse, fetchCourseById, updateEnrollment } from "../features/courses/coursesSlice";
@@ -37,7 +37,7 @@ const CourseDetailPage = () => {
   const [showAssessmentForm, setShowAssessmentForm] = useState(false);
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
   const [showAnnouncementForm, setShowAnnouncementForm] = useState(false);
-  const [showMaterialUpload, setShowMaterialUpload] = useState(false);
+  const [materialEditor, setMaterialEditor] = useState(null);
   const { error, selectedCourse, selectedStatus, viewerContext } = useSelector((state) => state.courses);
   const officeHoursState = useSelector((state) => state.officeHours);
   const attendanceState = useSelector((state) => state.courseAttendance);
@@ -70,7 +70,8 @@ const CourseDetailPage = () => {
   const announcementViewerContext = announcementState.viewerContextByCourseId[id] || {};
   const materials = materialState.itemsByCourseId[id] || [];
   const materialStatus = materialState.statusByCourseId[id] || "idle";
-  const materialFilters = materialState.filtersByCourseId[id] || { search: "", type: "" };
+  const materialFilters = materialState.filtersByCourseId[id] || { search: "", type: "", status: "", week: "", module: "", bookmarked: "", readStatus: "" };
+  const materialStats = materialState.statsByCourseId[id] || {};
   const materialViewerContext = materialState.viewerContextByCourseId[id] || {};
 
   useEffect(() => {
@@ -80,7 +81,17 @@ const CourseDetailPage = () => {
 
   useEffect(() => {
     if (id) dispatch(fetchCourseMaterials({ courseId: id, filters: materialFilters }));
-  }, [dispatch, id, materialFilters.search, materialFilters.type]);
+  }, [
+    dispatch,
+    id,
+    materialFilters.search,
+    materialFilters.type,
+    materialFilters.status,
+    materialFilters.week,
+    materialFilters.module,
+    materialFilters.bookmarked,
+    materialFilters.readStatus,
+  ]);
 
   useEffect(() => {
     if (id) dispatch(fetchCourseAnnouncements({ courseId: id, filters: announcementFilters }));
@@ -118,6 +129,32 @@ const CourseDetailPage = () => {
       toast.error(updateError || "Unable to update enrollment");
     }
   };
+
+  const groupedMaterials = useMemo(() => {
+    const groups = new Map();
+    materials.forEach((material) => {
+      const key = `${material.week || "general"}:${material.module || "course"}`;
+      const label = [material.week ? `Week ${material.week}` : "Course resources", material.module].filter(Boolean).join(" - ");
+      if (!groups.has(key)) groups.set(key, { key, label, items: [] });
+      groups.get(key).items.push(material);
+    });
+    return Array.from(groups.values());
+  }, [materials]);
+
+  const materialSummary = materialViewerContext.isInstructor
+    ? [
+        ["Total", materialStats.total || materials.length],
+        ["Drafts", materialStats.draft || 0],
+        ["Scheduled", materialStats.scheduled || 0],
+        ["Published", materialStats.published || 0],
+        ["Pinned", materialStats.pinned || 0],
+      ]
+    : [
+        ["Available", materialStats.total || materials.length],
+        ["Unread", materialStats.unread || 0],
+        ["Saved", materialStats.bookmarked || 0],
+        ["Pinned", materialStats.pinned || 0],
+      ];
 
   if (selectedStatus === "loading") return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-8"><p className="rounded-3xl bg-white p-8 text-center text-gray-500 shadow">Loading course...</p></div>;
   if (selectedStatus === "failed") return <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-8"><p className="rounded-3xl bg-red-50 p-8 text-center text-red-600 shadow">{error}</p></div>;
@@ -198,11 +235,23 @@ const CourseDetailPage = () => {
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div>
                   <h2 className="text-2xl font-black text-gray-900">Materials</h2>
-                  <p className="text-sm text-gray-500">Lecture notes, slides, references, and course links.</p>
+                  <p className="text-sm text-gray-500">
+                    {materialViewerContext.isInstructor
+                      ? "Create, schedule, publish, and organize lecture resources."
+                      : "Access published lecture notes, slides, links, recordings, and lab files."}
+                  </p>
                 </div>
-                {materialViewerContext.isInstructor && <button className="btn btn-primary rounded-2xl" onClick={() => setShowMaterialUpload(true)}>+ Upload material</button>}
+                {materialViewerContext.isInstructor && <button className="btn btn-primary rounded-2xl" onClick={() => setMaterialEditor({ material: null })}>+ Add material</button>}
               </div>
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                {materialSummary.map(([label, value]) => (
+                  <div key={label} className="rounded-2xl bg-slate-50 p-4">
+                    <p className="text-2xl font-black text-gray-900">{value}</p>
+                    <p className="text-xs font-bold text-gray-500">{label}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 <input className="input input-bordered rounded-2xl" value={materialFilters.search || ""} onChange={(e) => dispatch(setMaterialFilters({ courseId: id, filters: { search: e.target.value } }))} placeholder="Search materials" />
                 <select className="select select-bordered rounded-2xl" value={materialFilters.type || ""} onChange={(e) => dispatch(setMaterialFilters({ courseId: id, filters: { type: e.target.value } }))}>
                   <option value="">All types</option>
@@ -216,11 +265,51 @@ const CourseDetailPage = () => {
                   <option value="link">link</option>
                   <option value="other">other</option>
                 </select>
+                {materialViewerContext.isInstructor && (
+                  <select className="select select-bordered rounded-2xl" value={materialFilters.status || ""} onChange={(e) => dispatch(setMaterialFilters({ courseId: id, filters: { status: e.target.value } }))}>
+                    <option value="">All statuses</option>
+                    <option value="draft">draft</option>
+                    <option value="published">published</option>
+                    <option value="scheduled">scheduled</option>
+                    <option value="archived">archived</option>
+                  </select>
+                )}
+                {!materialViewerContext.isInstructor && (
+                  <select className="select select-bordered rounded-2xl" value={materialFilters.readStatus || ""} onChange={(e) => dispatch(setMaterialFilters({ courseId: id, filters: { readStatus: e.target.value } }))}>
+                    <option value="">All read states</option>
+                    <option value="unread">Unread</option>
+                    <option value="read">Read</option>
+                  </select>
+                )}
+                {!materialViewerContext.isInstructor && (
+                  <select className="select select-bordered rounded-2xl" value={materialFilters.bookmarked || ""} onChange={(e) => dispatch(setMaterialFilters({ courseId: id, filters: { bookmarked: e.target.value } }))}>
+                    <option value="">All saved states</option>
+                    <option value="true">Saved only</option>
+                  </select>
+                )}
+                <input className="input input-bordered rounded-2xl" type="number" min="1" value={materialFilters.week || ""} onChange={(e) => dispatch(setMaterialFilters({ courseId: id, filters: { week: e.target.value } }))} placeholder="Week" />
+                <input className="input input-bordered rounded-2xl" value={materialFilters.module || ""} onChange={(e) => dispatch(setMaterialFilters({ courseId: id, filters: { module: e.target.value } }))} placeholder="Module" />
               </div>
               {materialStatus === "loading" && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">Loading materials...</p>}
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
-                {materials.map((material) => (
-                  <CourseMaterialCard key={material._id} courseId={id} isInstructor={materialViewerContext.isInstructor} material={material} />
+              <div className="mt-5 space-y-5">
+                {groupedMaterials.map((group) => (
+                  <section key={group.key}>
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h3 className="text-sm font-black uppercase tracking-wide text-gray-500">{group.label}</h3>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{group.items.length} item{group.items.length === 1 ? "" : "s"}</span>
+                    </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {group.items.map((material) => (
+                        <CourseMaterialCard
+                          key={material._id}
+                          courseId={id}
+                          isInstructor={materialViewerContext.isInstructor}
+                          material={material}
+                          onEdit={(selectedMaterial) => setMaterialEditor({ material: selectedMaterial })}
+                        />
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
               {materialStatus === "succeeded" && materials.length === 0 && <p className="mt-4 rounded-2xl bg-slate-50 p-4 text-sm text-gray-500">No materials uploaded yet.</p>}
@@ -368,7 +457,13 @@ const CourseDetailPage = () => {
       {showAssessmentForm && <AssessmentFormModal courseId={id} onClose={() => setShowAssessmentForm(false)} />}
       {showAssignmentForm && <AssignmentFormModal courseId={id} onClose={() => setShowAssignmentForm(false)} />}
       {showAnnouncementForm && <CourseAnnouncementFormModal courseId={id} onClose={() => setShowAnnouncementForm(false)} />}
-      {showMaterialUpload && <CourseMaterialUploadModal courseId={id} onClose={() => setShowMaterialUpload(false)} />}
+      {materialEditor && (
+        <CourseMaterialEditorModal
+          courseId={id}
+          material={materialEditor.material}
+          onClose={() => setMaterialEditor(null)}
+        />
+      )}
     </div>
   );
 };

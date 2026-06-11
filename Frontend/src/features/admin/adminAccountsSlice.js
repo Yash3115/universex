@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import api from "../../services/api";
 
 const ADMIN_ACCOUNTS_ENDPOINT = "/api/users/admin/accounts";
+const ADMIN_ACCESS_REQUESTS_ENDPOINT = "/api/users/admin/access-requests";
 
 const buildQuery = (filters = {}) => {
   const params = new URLSearchParams();
@@ -52,10 +53,38 @@ export const createManagedAccount = createAsyncThunk(
   }
 );
 
+export const fetchAccessRequests = createAsyncThunk(
+  "adminAccounts/fetchAccessRequests",
+  async (filters = {}, { rejectWithValue }) => {
+    try {
+      const response = await api.get(`${ADMIN_ACCESS_REQUESTS_ENDPOINT}${buildQuery(filters)}`);
+      return response.data.requests || [];
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+export const updateAccessRequestStatus = createAsyncThunk(
+  "adminAccounts/updateAccessRequestStatus",
+  async ({ requestId, status }, { rejectWithValue }) => {
+    try {
+      const response = await api.patch(`${ADMIN_ACCESS_REQUESTS_ENDPOINT}/${requestId}`, { status });
+      return response.data.request;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
 const adminAccountsSlice = createSlice({
   name: "adminAccounts",
   initialState: {
     accounts: [],
+    accessRequests: [],
+    accessRequestStatus: "idle",
+    accessRequestError: null,
+    accessRequestActionById: {},
     status: "idle",
     createStatus: "idle",
     error: null,
@@ -103,6 +132,31 @@ const adminAccountsSlice = createSlice({
       .addCase(createManagedAccount.rejected, (state, action) => {
         state.createStatus = "failed";
         state.createError = action.payload || action.error.message;
+      })
+      .addCase(fetchAccessRequests.pending, (state) => {
+        state.accessRequestStatus = "loading";
+        state.accessRequestError = null;
+      })
+      .addCase(fetchAccessRequests.fulfilled, (state, action) => {
+        state.accessRequestStatus = "succeeded";
+        state.accessRequests = action.payload;
+      })
+      .addCase(fetchAccessRequests.rejected, (state, action) => {
+        state.accessRequestStatus = "failed";
+        state.accessRequestError = action.payload || action.error.message;
+      })
+      .addCase(updateAccessRequestStatus.pending, (state, action) => {
+        state.accessRequestActionById[action.meta.arg.requestId] = true;
+      })
+      .addCase(updateAccessRequestStatus.fulfilled, (state, action) => {
+        delete state.accessRequestActionById[action.payload._id];
+        state.accessRequests = state.accessRequests.map((request) =>
+          request._id === action.payload._id ? action.payload : request
+        );
+      })
+      .addCase(updateAccessRequestStatus.rejected, (state, action) => {
+        delete state.accessRequestActionById[action.meta.arg?.requestId];
+        state.accessRequestError = action.payload || action.error.message;
       });
   },
 });

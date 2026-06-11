@@ -6,7 +6,9 @@ import { toast } from "react-toastify";
 import {
   clearCreatedAccount,
   createManagedAccount,
+  fetchAccessRequests,
   fetchManagedAccounts,
+  updateAccessRequestStatus,
 } from "../features/admin/adminAccountsSlice";
 
 const emptyForm = {
@@ -62,6 +64,10 @@ const AdminAccountsPage = () => {
     createError,
     createdAccount,
     temporaryPassword,
+    accessRequests,
+    accessRequestStatus,
+    accessRequestError,
+    accessRequestActionById,
   } = useSelector((state) => state.adminAccounts);
 
   const [formData, setFormData] = useState(emptyForm);
@@ -81,6 +87,12 @@ const AdminAccountsPage = () => {
     }
   }, [dispatch, query, user?.role]);
 
+  useEffect(() => {
+    if (user?.role === "Admin" && !isDemoAdmin) {
+      dispatch(fetchAccessRequests({ status: "new" }));
+    }
+  }, [dispatch, isDemoAdmin, user?.role]);
+
   const metrics = useMemo(() => {
     const pending = accounts.filter(
       (account) => account.mustChangePassword || account.profileCompletionRequired
@@ -91,8 +103,9 @@ const AdminAccountsPage = () => {
       students: accounts.filter((account) => account.role === "Student").length,
       professors: accounts.filter((account) => account.role === "Professor").length,
       pending,
+      accessRequests: accessRequests.filter((request) => request.status === "new").length,
     };
-  }, [accounts]);
+  }, [accessRequests, accounts]);
 
   const updateField = (field, value) => {
     setFormData((current) => ({
@@ -155,6 +168,28 @@ const AdminAccountsPage = () => {
     }
   };
 
+  const handleUseAccessRequest = (request) => {
+    const [firstName = "", ...lastNameParts] = request.name.split(" ");
+    setFormData((current) => ({
+      ...current,
+      role: request.role,
+      firstName,
+      lastName: lastNameParts.join(" "),
+      email: request.email,
+      college: request.college,
+    }));
+    toast.info("Access request copied into the account form.");
+  };
+
+  const handleAccessRequestStatus = async (requestId, status) => {
+    try {
+      await dispatch(updateAccessRequestStatus({ requestId, status })).unwrap();
+      toast.success(`Request marked ${status}`);
+    } catch (message) {
+      toast.error(message || "Unable to update access request");
+    }
+  };
+
   if (!user || user.role !== "Admin") {
     return (
       <main className="min-h-screen bg-slate-50 p-6">
@@ -196,6 +231,7 @@ const AdminAccountsPage = () => {
             ["Students", metrics.students, FaUsers, "text-emerald-700"],
             ["Professors", metrics.professors, FaChalkboardTeacher, "text-violet-700"],
             ["Setup required", metrics.pending, FaKey, "text-amber-700"],
+            ["New requests", metrics.accessRequests, FaUserPlus, "text-pink-700"],
           ].map(([label, value, Icon, color]) => (
             <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 ${color}`}>
@@ -206,6 +242,101 @@ const AdminAccountsPage = () => {
             </div>
           ))}
         </section>
+
+        {!isDemoAdmin && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-xl font-black text-slate-950">Access requests</h2>
+                <p className="text-sm text-slate-500">
+                  Public and demo visitors who are ready for admin-created accounts.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn rounded-xl bg-white"
+                onClick={() => dispatch(fetchAccessRequests({ status: "new" }))}
+              >
+                Refresh requests
+              </button>
+            </div>
+
+            {accessRequestError && (
+              <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">
+                {accessRequestError}
+              </p>
+            )}
+
+            <div className="mt-5 overflow-x-auto">
+              <table className="table">
+                <thead>
+                  <tr className="text-slate-600">
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>College</th>
+                    <th>Source</th>
+                    <th>Message</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {accessRequestStatus === "loading" && (
+                    <tr>
+                      <td colSpan="6" className="py-8 text-center font-semibold text-slate-500">
+                        Loading access requests...
+                      </td>
+                    </tr>
+                  )}
+                  {accessRequestStatus !== "loading" && accessRequests.filter((request) => request.status === "new").length === 0 && (
+                    <tr>
+                      <td colSpan="6" className="py-8 text-center font-semibold text-slate-500">
+                        No new access requests.
+                      </td>
+                    </tr>
+                  )}
+                  {accessRequestStatus !== "loading" &&
+                    accessRequests
+                      .filter((request) => request.status === "new")
+                      .map((request) => (
+                        <tr key={request._id}>
+                          <td>
+                            <div className="font-black text-slate-950">{request.name}</div>
+                            <div className="text-sm text-slate-500">{request.email}</div>
+                          </td>
+                          <td><span className="badge badge-outline rounded-lg">{request.role}</span></td>
+                          <td>{request.college}</td>
+                          <td className="capitalize">{request.source || "public"}</td>
+                          <td className="max-w-xs truncate">{request.message || "No message"}</td>
+                          <td>
+                            <div className="flex flex-wrap gap-2">
+                              <button className="btn btn-xs rounded-lg" type="button" onClick={() => handleUseAccessRequest(request)}>
+                                Use
+                              </button>
+                              <button
+                                className="btn btn-xs rounded-lg"
+                                type="button"
+                                disabled={Boolean(accessRequestActionById[request._id])}
+                                onClick={() => handleAccessRequestStatus(request._id, "reviewed")}
+                              >
+                                Reviewed
+                              </button>
+                              <button
+                                className="btn btn-xs rounded-lg bg-slate-100"
+                                type="button"
+                                disabled={Boolean(accessRequestActionById[request._id])}
+                                onClick={() => handleAccessRequestStatus(request._id, "closed")}
+                              >
+                                Close
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         <div className="grid gap-6 xl:grid-cols-[24rem_1fr]">
           <section className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

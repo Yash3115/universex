@@ -8,6 +8,9 @@ const {
   createCourseMaterial,
   deleteCourseMaterial,
   getCourseMaterials,
+  markCourseMaterialRead,
+  toggleCourseMaterialBookmark,
+  updateCourseMaterial,
 } = require("../controllers/courseMaterialController");
 const {
   createCourse,
@@ -32,6 +35,9 @@ router.post("/:id/join", joinCourse);
 router.patch("/:id/enrollments/:studentId", updateEnrollment);
 router.post("/:courseId/materials", blockDemoFileUploads, createCourseMaterial);
 router.get("/:courseId/materials", getCourseMaterials);
+router.patch("/:courseId/materials/:materialId", blockDemoFileUploads, updateCourseMaterial);
+router.post("/:courseId/materials/:materialId/read", markCourseMaterialRead);
+router.post("/:courseId/materials/:materialId/bookmark", toggleCourseMaterialBookmark);
 router.delete("/:courseId/materials/:materialId", deleteCourseMaterial);
 router.post("/:courseId/announcements", createCourseAnnouncement);
 router.get("/:courseId/announcements", getCourseAnnouncements);

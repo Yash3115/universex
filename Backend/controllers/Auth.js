@@ -9,6 +9,7 @@ const mailSender = require("../utils/mailSender");
 const { passwordUpdated } = require("../mail/templates/passwordUpdate");
 const Profile = require("../models/profileSchema");
 const FacultyProfile = require("../models/facultyProfileSchema");
+const AccessRequest = require("../models/accessRequestSchema");
 const {
   getAuthCookieOptions,
   getClearAuthCookieOptions,
@@ -628,6 +629,54 @@ exports.listManagedAccounts = async (req, res) => {
     return res.status(200).json({ success: true, users });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Failed to load accounts", error: error.message });
+  }
+};
+
+exports.listAccessRequests = async (req, res) => {
+  try {
+    const { status = "", role = "", search = "" } = req.query;
+    const filter = {};
+
+    if (["new", "reviewed", "closed"].includes(status)) filter.status = status;
+    if (["Student", "Professor"].includes(role)) filter.role = role;
+    if (search.trim()) {
+      filter.$or = [
+        { name: new RegExp(search.trim(), "i") },
+        { email: new RegExp(search.trim(), "i") },
+        { college: new RegExp(search.trim(), "i") },
+      ];
+    }
+
+    const requests = await AccessRequest.find(filter)
+      .sort({ status: 1, createdAt: -1 })
+      .limit(100);
+
+    return res.status(200).json({ success: true, requests });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to load access requests", error: error.message });
+  }
+};
+
+exports.updateAccessRequestStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    if (!["new", "reviewed", "closed"].includes(status)) {
+      return res.status(400).json({ success: false, message: "Invalid access request status" });
+    }
+
+    const request = await AccessRequest.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    );
+
+    if (!request) {
+      return res.status(404).json({ success: false, message: "Access request not found" });
+    }
+
+    return res.status(200).json({ success: true, request });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to update access request", error: error.message });
   }
 };
 

@@ -459,6 +459,13 @@ const dummyMaterials = [
     type: "notes",
     externalUrl: "https://universex.demo/materials/cs301/week-1-complexity-arrays.pdf",
     tags: ["complexity", "arrays", "practice"],
+    status: "published",
+    resourceKind: "file",
+    week: 1,
+    module: "Foundations",
+    topic: "Complexity analysis and array patterns",
+    lectureOffsetDays: -8,
+    allowDownload: true,
     pinned: true,
   },
   {
@@ -468,6 +475,14 @@ const dummyMaterials = [
     type: "assignment-brief",
     externalUrl: "https://universex.demo/materials/cs301/graph-traversal-practice.pdf",
     tags: ["graphs", "bfs", "dfs"],
+    status: "scheduled",
+    resourceKind: "file",
+    week: 3,
+    module: "Graphs",
+    topic: "BFS and DFS practice",
+    lectureOffsetDays: 4,
+    releaseAtOffsetDays: 2,
+    allowDownload: true,
   },
   {
     courseCode: "CS451",
@@ -476,6 +491,13 @@ const dummyMaterials = [
     type: "reference",
     externalUrl: "https://universex.demo/materials/cs451/project-dataset-brief.pdf",
     tags: ["project", "datasets", "rubric"],
+    status: "published",
+    resourceKind: "file",
+    week: 1,
+    module: "Project Studio",
+    topic: "Dataset selection and evaluation plan",
+    lectureOffsetDays: -6,
+    allowDownload: true,
     pinned: true,
   },
   {
@@ -485,6 +507,13 @@ const dummyMaterials = [
     type: "lab",
     externalUrl: "https://universex.demo/materials/cs451/model-evaluation-lab.ipynb",
     tags: ["lab", "evaluation", "notebook"],
+    status: "published",
+    resourceKind: "link",
+    week: 2,
+    module: "Model Evaluation",
+    topic: "Validation, metrics, and model cards",
+    lectureOffsetDays: -2,
+    allowDownload: true,
   },
   {
     courseCode: "EC210",
@@ -493,6 +522,13 @@ const dummyMaterials = [
     type: "lab",
     externalUrl: "https://universex.demo/materials/ec210/pin-mapping-sheet.pdf",
     tags: ["microcontroller", "gpio", "lab"],
+    status: "published",
+    resourceKind: "file",
+    week: 1,
+    module: "Lab Setup",
+    topic: "GPIO reference and safe wiring",
+    lectureOffsetDays: -5,
+    allowDownload: true,
     pinned: true,
   },
 ];
@@ -774,7 +810,7 @@ const seedDummyMaterials = async (coursesByCode) => {
     const course = coursesByCode.get(materialData.courseCode);
     if (!course) continue;
 
-    const { courseCode, ...materialPayload } = materialData;
+    const { courseCode, lectureOffsetDays = -3, releaseAtOffsetDays = -3, ...materialPayload } = materialData;
     const material = await upsertFixtureRecord(
       CourseMaterial,
       { course: course._id, title: materialPayload.title },
@@ -783,7 +819,9 @@ const seedDummyMaterials = async (coursesByCode) => {
         course: course._id,
         uploadedBy: course.professor,
         visibility: "enrolled",
-        publishedAt: daysFromNow(-3),
+        lectureDate: daysFromNow(lectureOffsetDays),
+        releaseAt: daysFromNow(releaseAtOffsetDays),
+        publishedAt: daysFromNow(releaseAtOffsetDays),
       },
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true }
     );
