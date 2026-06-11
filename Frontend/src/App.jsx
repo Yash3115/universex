@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { getUser } from "./features/auth/authSlice";
+import { bootstrapSession } from "./features/auth/authSlice";
 import Navbar from "./components/Navbar";
 import DemoBanner from "./components/DemoBanner";
 import { ToastContainer } from "react-toastify";
@@ -49,7 +49,7 @@ const App = () => {
   const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
-    dispatch(getUser());
+    dispatch(bootstrapSession());
   }, [dispatch]);
 
 

@@ -10,13 +10,15 @@ const rememberDemoSession = () => {
   window.localStorage.removeItem(DEMO_SESSION_EXPIRED_KEY);
 };
 
+const isDemoSessionRemembered = () => window.localStorage.getItem(DEMO_SESSION_STORAGE_KEY) === "true";
+
 const clearDemoSession = () => {
   window.localStorage.removeItem(DEMO_SESSION_STORAGE_KEY);
   window.localStorage.removeItem(DEMO_SESSION_EXPIRED_KEY);
 };
 
 const markExpiredDemoSession = () => {
-  if (window.localStorage.getItem(DEMO_SESSION_STORAGE_KEY) === "true") {
+  if (isDemoSessionRemembered()) {
     window.localStorage.removeItem(DEMO_SESSION_STORAGE_KEY);
     window.localStorage.setItem(DEMO_SESSION_EXPIRED_KEY, "true");
     toast.info("Demo session expired. Start a new demo anytime.");
@@ -56,9 +58,47 @@ export const getUser = createAsyncThunk(
           withCredentials: true,
         }
       );
+      if (response.data?.user && !response.data.user.isDemo) {
+        clearDemoSession();
+      }
       return response.data;
     } catch (error) {
-      markExpiredDemoSession();
+      if (error.response?.status === 401) {
+        markExpiredDemoSession();
+      }
+      return rejectWithValue(error.response?.data);
+    }
+  }
+);
+
+export const bootstrapSession = createAsyncThunk(
+  "auth/bootstrapSession",
+  async (_, { rejectWithValue }) => {
+    try {
+      if (isDemoSessionRemembered()) {
+        try {
+          const statusResponse = await api.get("/api/demo/status", { withCredentials: true });
+          if (statusResponse.data?.isDemo) {
+            const demoUserResponse = await api.get("/api/users/getUser", { withCredentials: true });
+            if (demoUserResponse.data?.user?.isDemo) {
+              return demoUserResponse.data;
+            }
+          }
+          clearDemoSession();
+        } catch (error) {
+          if (error.response?.status === 401) {
+            markExpiredDemoSession();
+          }
+          return rejectWithValue(error.response?.data);
+        }
+      }
+
+      const response = await api.get("/api/users/getUser", { withCredentials: true });
+      if (response.data?.user && !response.data.user.isDemo) {
+        clearDemoSession();
+      }
+      return response.data;
+    } catch (error) {
       return rejectWithValue(error.response?.data);
     }
   }
@@ -266,6 +306,19 @@ const authSlice = createSlice({
         state.user = action.payload.user;
       })
       .addCase(getUser.rejected, (state) => {
+        state.loading = false;
+        state.isAuthenticated = false;
+        state.user = null;
+      })
+      .addCase(bootstrapSession.pending, (state) => {
+        state.loading = true;
+      })
+      .addCase(bootstrapSession.fulfilled, (state, action) => {
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.user = action.payload.user;
+      })
+      .addCase(bootstrapSession.rejected, (state) => {
         state.loading = false;
         state.isAuthenticated = false;
         state.user = null;

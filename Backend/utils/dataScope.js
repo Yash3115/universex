@@ -23,9 +23,22 @@ const runWithDataScope = (dataScope, callback) =>
 const runWithoutDataScope = (callback) =>
   scopeStorage.run({ ...getScopeState(), bypassDataScope: true }, callback);
 
+const PRODUCTION_ONLY_PATHS = new Set([
+  "/api/users/login",
+  "/api/users/signup",
+  "/api/users/sendotp",
+  "/api/users/reset-password-token",
+  "/api/users/reset-password",
+]);
+
 const resolveRequestDataScope = (req) => {
   const headerValue = String(req.headers["x-universex-mode"] || "").toLowerCase();
-  if (req.path?.startsWith("/api/demo") || headerValue === "demo") return DATA_SCOPES.DEMO;
+  const requestPath = req.path || "";
+
+  if (PRODUCTION_ONLY_PATHS.has(requestPath)) return DATA_SCOPES.PRODUCTION;
+  if (requestPath.startsWith("/api/demo")) return DATA_SCOPES.DEMO;
+  if (headerValue === "demo" && req.cookies?.demoToken) return DATA_SCOPES.DEMO;
+
   return DATA_SCOPES.PRODUCTION;
 };
 

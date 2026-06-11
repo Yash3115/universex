@@ -32,6 +32,12 @@ const courseSchema = new mongoose.Schema(
 courseSchema.index({ professor: 1, status: 1 });
 courseSchema.index({ college: 1, department: 1, status: 1 });
 courseSchema.index({ dataScope: 1, code: 1, college: 1, section: 1, academicYear: 1 }, { unique: true });
-courseSchema.index({ joinCode: 1 }, { sparse: true });
+courseSchema.index(
+  { dataScope: 1, joinCode: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { joinCode: { $type: "string", $gt: "" } },
+  }
+);
 
 module.exports = mongoose.model("Course", courseSchema);

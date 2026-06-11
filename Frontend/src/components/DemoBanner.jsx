@@ -28,9 +28,9 @@ const DemoBanner = () => {
     <div className="sticky top-[66px] z-30 border-b border-amber-200 bg-amber-50/95 px-4 py-2 text-amber-950 shadow-sm backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-black">Demo Mode - sample data resets regularly</p>
+          <p className="text-sm font-black">Demo Mode - isolated sample data</p>
           <p className="text-xs text-amber-800">
-            You are exploring fictional sandbox data. Demo activity is disposable.
+            You are exploring fictional sandbox data. Demo activity is disposable and can be reset manually.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">

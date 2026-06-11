@@ -8,7 +8,10 @@
     "dev": "nodemon server.js",
     "seed:dummy-users": "node scripts/seedDummyUsers.js",
     "seed:demo": "node scripts/seedDemoData.js",
-    "reset:demo": "node scripts/resetDemoData.js"
+    "reset:demo": "node scripts/resetDemoData.js",
+    "reset:demo:dry-run": "node scripts/resetDemoData.js --dry-run",
+    "migrate:demo-indexes": "node scripts/migrateDemoIndexes.js",
+    "migrate:demo-indexes:dry-run": "node scripts/migrateDemoIndexes.js --dry-run"
   },
   "keywords": [],
   "author": "",

@@ -14,7 +14,7 @@ const DEMO_ROLE_EMAILS = {
 };
 const DEMO_SESSION_SECONDS = Number(process.env.DEMO_SESSION_SECONDS) || 60 * 60 * 2;
 const DEMO_RESET_NOTE =
-  process.env.DEMO_RESET_NOTE || "Sample data resets regularly and demo activity is disposable.";
+  process.env.DEMO_RESET_NOTE || "Sample data is isolated and can be reset manually. Demo activity is disposable.";
 
 const normalizeDemoRole = (role) => (["Student", "Professor", "Admin"].includes(role) ? role : "Student");
 
