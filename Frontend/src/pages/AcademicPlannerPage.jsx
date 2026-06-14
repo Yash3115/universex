@@ -40,6 +40,9 @@ const statusLabels = {
   done: "Done",
 };
 
+const getTaskSourceLabel = (task) =>
+  task.source === "assignment" ? "Assignment" : task.source ? String(task.source) : "Manual";
+
 const formatDate = (date) => {
   if (!date) return "No due date";
   return new Date(date).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
@@ -249,7 +252,10 @@ const AcademicPlannerPage = () => {
                     <article key={task._id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
                       <p className="font-black text-gray-900">{task.title}</p>
                       <p className="mt-1 text-xs text-gray-500">{task.subject || "General"} - {formatDate(task.dueDate)}</p>
-                      <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-bold ${priorityTone[task.priority] || priorityTone.medium}`}>{task.priority}</span>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${priorityTone[task.priority] || priorityTone.medium}`}>{task.priority}</span>
+                        <span className="inline-flex rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600">{getTaskSourceLabel(task)}</span>
+                      </div>
                     </article>
                   ))}
                   {upcomingTasks.length === 0 && <p className="rounded-xl bg-slate-50 p-4 text-sm text-gray-500 md:col-span-2">No active deadlines.</p>}
@@ -267,6 +273,7 @@ const AcademicPlannerPage = () => {
                             <div>
                               <p className="font-black text-gray-900">{task.title}</p>
                               <p className="mt-1 text-xs text-gray-500">{task.subject || "General"} - {formatDate(task.dueDate)}</p>
+                              <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-blue-600">{getTaskSourceLabel(task)}</p>
                             </div>
                             <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-bold ${priorityTone[task.priority] || priorityTone.medium}`}>{task.priority}</span>
                           </div>

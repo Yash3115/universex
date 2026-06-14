@@ -26,7 +26,7 @@ const ResultsPage = () => {
               <p className="text-xs font-black uppercase tracking-wide text-blue-600">{result.course?.code}</p>
               <h2 className="mt-1 text-xl font-black text-gray-900">{result.assessment?.title}</h2>
               <p className="mt-2 text-sm text-gray-500">{result.assessment?.type}</p>
-              <p className="mt-4 text-lg font-black text-gray-900">{result.marks}/{result.assessment?.maxMarks || "--"} {result.grade && `· ${result.grade}`}</p>
+              <p className="mt-4 text-lg font-black text-gray-900">{result.marks}/{result.assessment?.maxMarks || "--"} {result.grade && `- ${result.grade}`}</p>
               {result.feedback && <p className="mt-3 rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">{result.feedback}</p>}
               <p className="mt-3 text-xs text-gray-400">Published {new Date(result.publishedAt).toLocaleString()}</p>
             </article>

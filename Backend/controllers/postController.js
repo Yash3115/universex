@@ -6,6 +6,8 @@ const { createNotification } = require("../utils/notificationService");
 
 const POST_CATEGORIES = ["General", "Academics", "Placements", "Events", "Lost & Found", "Help", "Announcements"];
 
+const canAccessPost = (post, user) => user?.role === "Admin" || post.college === user?.college;
+
 const normalizeTags = (tags) => {
     if (Array.isArray(tags)) return tags.map((tag) => String(tag).trim()).filter(Boolean).slice(0, 8);
     if (typeof tags === "string") return tags.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 8);
@@ -65,7 +67,8 @@ exports.getPosts = async (req, res) => {
         const { category, search, sort = "newest" } = req.query;
         const pageNumber = Math.max(parseInt(req.query.page, 10) || 1, 1);
         const pageSize = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 50);
-        const filter = {};
+        const filter = req.user?.role === "Admin" ? {} : { college: req.user.college };
+        if (req.user?.role === "Admin" && req.query.college?.trim()) filter.college = req.query.college.trim();
         if (category && category !== "all") filter.category = category;
         if (search?.trim()) filter.$text = { $search: search.trim() };
         const sortBy = sort === "trending" ? { likes: -1, createdAt: -1 } : { createdAt: -1 };
@@ -99,12 +102,29 @@ exports.getPosts = async (req, res) => {
     }
 };
 
+exports.getReportedPosts = async (req, res) => {
+    try {
+        const posts = await Post.find({ "reports.0": { $exists: true } })
+            .populate("user", "firstName lastName email image college")
+            .populate("reports.user", "firstName lastName email image")
+            .sort({ updatedAt: -1 })
+            .limit(100);
+
+        res.status(200).json({ success: true, posts });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+};
+
 exports.reportPost = async (req, res) => {
     try {
         const { id } = req.params;
         const { reason = "" } = req.body;
         const post = await Post.findById(id);
         if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+        if (!canAccessPost(post, req.user)) {
+            return res.status(403).json({ success: false, message: "You cannot access this post" });
+        }
 
         const alreadyReported = post.reports.some((report) => report.user.toString() === req.user.id);
         if (!alreadyReported) {
@@ -123,6 +143,9 @@ exports.savePost = async (req, res) => {
         const { id } = req.params;
         const post = await Post.findById(id);
         if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+        if (!canAccessPost(post, req.user)) {
+            return res.status(403).json({ success: false, message: "You cannot access this post" });
+        }
 
         const isSaved = post.savedBy.some((userId) => userId.toString() === req.user.id);
         post.savedBy = isSaved
@@ -144,7 +167,7 @@ exports.deletePost = async (req, res) => {
         const post = await Post.findById(req.params.id);
         if (!post) return res.status(404).json({ success: false, message: "Post not found" });
 
-        if (post.user.toString() !== userId) {
+        if (post.user.toString() !== userId && req.user.role !== "Admin") {
             return res.status(403).json({ success: false, message: "Unauthorized to delete this post" });
         }
 
@@ -168,6 +191,9 @@ exports.likePost = async (req, res) => {
         const post = await Post.findById(id);
         if (!post) {
             return res.status(404).json({ success: false, message: "Post not found" });
+        }
+        if (!canAccessPost(post, req.user)) {
+            return res.status(403).json({ success: false, message: "You cannot access this post" });
         }
 
         const isLiked = post.likes.some((id) => id.toString() === userId);

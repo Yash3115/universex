@@ -87,6 +87,23 @@ const canManageJob = (job, user) =>
 
 const populateJob = (query) => query.populate("postedBy", "firstName lastName email image role");
 
+const hasViewer = (items = [], userId) =>
+  Boolean(userId) && items.some((item) => String(item?._id || item) === String(userId));
+
+const serializeJob = (job, user) => {
+  const data = job.toObject ? job.toObject() : job;
+  const userId = user?._id || user?.id;
+  return {
+    ...data,
+    isSaved: hasViewer(data.savedBy || [], userId),
+    isInterested: hasViewer(data.interestedBy || [], userId),
+    savedCount: data.savedBy?.length || 0,
+    interestedCount: data.interestedBy?.length || 0,
+    savedBy: undefined,
+    interestedBy: undefined,
+  };
+};
+
 exports.createJob = async (req, res) => {
   try {
     if (!canPublishJob(req.user)) {
@@ -124,7 +141,7 @@ exports.createJob = async (req, res) => {
     return res.status(201).json({
       success: true,
       message: "Opportunity posted successfully",
-      job,
+      job: serializeJob(job, req.user),
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Server Error", error: error.message });
@@ -164,7 +181,7 @@ exports.getAllJobs = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      jobs,
+      jobs: jobs.map((job) => serializeJob(job, req.user)),
       pagination: {
         currentPage: pageNumber,
         totalPages: Math.ceil(totalJobs / pageSize),
@@ -184,7 +201,7 @@ exports.getJobById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Opportunity not found" });
     }
 
-    return res.status(200).json({ success: true, job });
+    return res.status(200).json({ success: true, job: serializeJob(job, req.user) });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Server Error", error: error.message });
   }
@@ -214,7 +231,7 @@ exports.updateJob = async (req, res) => {
     return res.status(200).json({
       success: true,
       message: "Opportunity updated successfully",
-      job,
+      job: serializeJob(job, req.user),
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Server Error", error: error.message });
@@ -239,3 +256,32 @@ exports.deleteJob = async (req, res) => {
     return res.status(500).json({ success: false, message: "Server Error", error: error.message });
   }
 };
+
+const toggleJobUserList = async (req, res, field, label) => {
+  try {
+    if (req.user.role !== "Student") {
+      return res.status(403).json({ success: false, message: "Only students can track opportunities" });
+    }
+
+    const job = await Job.findById(req.params.id);
+    if (!job) return res.status(404).json({ success: false, message: "Opportunity not found" });
+
+    const exists = job[field].some((userId) => String(userId) === String(req.user.id));
+    job[field] = exists
+      ? job[field].filter((userId) => String(userId) !== String(req.user.id))
+      : [...job[field], req.user.id];
+    await job.save();
+    await job.populate("postedBy", "firstName lastName email image role");
+
+    return res.status(200).json({
+      success: true,
+      message: exists ? `${label} removed` : `${label} saved`,
+      job: serializeJob(job, req.user),
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Server Error", error: error.message });
+  }
+};
+
+exports.toggleSavedJob = (req, res) => toggleJobUserList(req, res, "savedBy", "Saved job");
+exports.toggleInterestedJob = (req, res) => toggleJobUserList(req, res, "interestedBy", "Interest");

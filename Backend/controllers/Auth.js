@@ -10,6 +10,7 @@ const { passwordUpdated } = require("../mail/templates/passwordUpdate");
 const Profile = require("../models/profileSchema");
 const FacultyProfile = require("../models/facultyProfileSchema");
 const AccessRequest = require("../models/accessRequestSchema");
+const AdminAuditLog = require("../models/adminAuditLogSchema");
 const {
   getAuthCookieOptions,
   getClearAuthCookieOptions,
@@ -34,6 +35,14 @@ const generateTemporaryPassword = () => {
 };
 
 const populateUserForSession = (query) => query.select("-password").populate("additionalDetails").populate("facultyProfile");
+
+const logAdminAction = async ({ actor, action, targetUser, accessRequest, metadata = {} }) => {
+  try {
+    await AdminAuditLog.create({ actor, action, targetUser, accessRequest, metadata });
+  } catch (error) {
+    console.error("Failed to write admin audit log:", error.message);
+  }
+};
 
 const applyProfileUpdates = (profile, payload = {}) => {
   const fields = ["about", "contactNumber", "insta", "linkedin", "department", "graduationYear", "skills", "interests", "visibility"];
@@ -584,6 +593,12 @@ exports.createManagedAccount = async (req, res) => {
     }
 
     const createdUser = await populateUserForSession(User.findById(user._id));
+    await logAdminAction({
+      actor: req.user.id,
+      action: "account_created",
+      targetUser: user._id,
+      metadata: { role: managedRole, email: normalizedEmail },
+    });
 
     return res.status(201).json({
       success: true,
@@ -598,10 +613,12 @@ exports.createManagedAccount = async (req, res) => {
 
 exports.listManagedAccounts = async (req, res) => {
   try {
-    const { role, search = "", onboarding = "" } = req.query;
+    const { role, search = "", onboarding = "", active = "" } = req.query;
     const filter = { role: { $in: ["Student", "Professor"] } };
 
     if (["Student", "Professor"].includes(role)) filter.role = role;
+    if (active === "true") filter.active = { $ne: false };
+    if (active === "false") filter.active = false;
     if (onboarding === "required") {
       filter.$or = [{ mustChangePassword: true }, { profileCompletionRequired: true }];
     }
@@ -674,9 +691,86 @@ exports.updateAccessRequestStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: "Access request not found" });
     }
 
+    await logAdminAction({
+      actor: req.user.id,
+      action: "access_request_updated",
+      accessRequest: request._id,
+      metadata: { status, email: request.email },
+    });
+
     return res.status(200).json({ success: true, request });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Failed to update access request", error: error.message });
+  }
+};
+
+exports.updateManagedAccountActiveStatus = async (req, res) => {
+  try {
+    const { active } = req.body;
+    if (typeof active !== "boolean") {
+      return res.status(400).json({ success: false, message: "Active status must be true or false" });
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user || !["Student", "Professor"].includes(user.role)) {
+      return res.status(404).json({ success: false, message: "Managed account not found" });
+    }
+
+    user.active = active;
+    await user.save();
+    const updatedUser = await populateUserForSession(User.findById(user._id));
+
+    await logAdminAction({
+      actor: req.user.id,
+      action: active ? "account_reactivated" : "account_deactivated",
+      targetUser: user._id,
+      metadata: { email: user.email, role: user.role },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: active ? "Account reactivated" : "Account deactivated",
+      user: updatedUser,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to update account status", error: error.message });
+  }
+};
+
+exports.resetManagedAccountPassword = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+    if (!user || !["Student", "Professor"].includes(user.role)) {
+      return res.status(404).json({ success: false, message: "Managed account not found" });
+    }
+
+    const temporaryPassword = req.body.password?.trim() || generateTemporaryPassword();
+    if (temporaryPassword.length < 8) {
+      return res.status(400).json({ success: false, message: "Temporary password must be at least 8 characters" });
+    }
+
+    user.password = await bcrypt.hash(temporaryPassword, 10);
+    user.mustChangePassword = true;
+    user.profileCompletionRequired = true;
+    user.temporaryPasswordLastSetAt = new Date();
+    await user.save();
+
+    const updatedUser = await populateUserForSession(User.findById(user._id));
+    await logAdminAction({
+      actor: req.user.id,
+      action: "temporary_password_reset",
+      targetUser: user._id,
+      metadata: { email: user.email, role: user.role },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Temporary password reset",
+      user: updatedUser,
+      temporaryPassword,
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to reset temporary password", error: error.message });
   }
 };
 

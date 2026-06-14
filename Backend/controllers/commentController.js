@@ -2,6 +2,8 @@ const Comment = require("../models/commentSchema");
 const Post = require("../models/postSchema");
 const { createNotification } = require("../utils/notificationService");
 
+const canAccessPost = (post, user) => user?.role === "Admin" || post.college === user?.college;
+
 // 📌 Create a new comment on a post (Direct Comment)
 exports.createComment = async (req, res) => {
     try {
@@ -16,6 +18,9 @@ exports.createComment = async (req, res) => {
         const post = await Post.findById(postId);
         if (!post) {
             return res.status(404).json({ success: false, message: "Post not found" });
+        }
+        if (!canAccessPost(post, req.user)) {
+            return res.status(403).json({ success: false, message: "You cannot access this post" });
         }
 
         const comment = new Comment({ user: userId, post: postId, content, parentComment: null });
@@ -57,6 +62,10 @@ exports.replyToComment = async (req, res) => {
         if (!parentComment) {
             return res.status(404).json({ success: false, message: "Comment not found" });
         }
+        const post = await Post.findById(parentComment.post);
+        if (!post || !canAccessPost(post, req.user)) {
+            return res.status(403).json({ success: false, message: "You cannot access this post" });
+        }
 
         const reply = new Comment({ 
             user: userId, 
@@ -92,6 +101,11 @@ exports.replyToComment = async (req, res) => {
 exports.getPostComments = async (req, res) => {
     try {
         const { postId } = req.params;
+        const post = await Post.findById(postId);
+        if (!post) return res.status(404).json({ success: false, message: "Post not found" });
+        if (!canAccessPost(post, req.user)) {
+            return res.status(403).json({ success: false, message: "You cannot access this post" });
+        }
 
         const comments = await Comment.find({ post: postId, parentComment: null }) // Fetch only top-level comments
             .populate("user", "firstName lastName image")
@@ -119,8 +133,12 @@ exports.deleteComment = async (req, res) => {
         if (!comment) {
             return res.status(404).json({ success: false, message: "Comment not found" });
         }
+        const post = await Post.findById(comment.post);
+        if (!post || !canAccessPost(post, req.user)) {
+            return res.status(403).json({ success: false, message: "You cannot access this post" });
+        }
 
-        if (comment.user.toString() !== userId) {
+        if (comment.user.toString() !== userId && req.user.role !== "Admin") {
             return res.status(403).json({ success: false, message: "Unauthorized to delete this comment" });
         }
 

@@ -37,7 +37,7 @@ const CourseCard = ({ course, showJoin = false }) => {
         {course.section && <span className="rounded-full bg-emerald-50 px-3 py-1 text-emerald-700">Section {course.section}</span>}
       </div>
       <p className="mt-4 text-sm text-gray-500">Professor: <span className="font-bold text-gray-800">{course.professor?.firstName} {course.professor?.lastName}</span></p>
-      <p className="mt-1 text-xs text-gray-400">{course.enrollments?.filter((item) => item.status === "enrolled").length || 0} enrolled</p>
+      <p className="mt-1 text-xs text-gray-400">{course.enrollmentSummary?.enrolled ?? course.enrollments?.filter((item) => item.status === "enrolled").length ?? 0} enrolled</p>
       <div className="mt-5 grid grid-cols-2 gap-2">
         <button className="btn rounded-2xl" onClick={() => navigate(`/courses/${course._id}`)}>Open</button>
         {showJoin && <button className="btn btn-primary rounded-2xl" disabled={isJoined} onClick={handleJoin}>{isJoined ? enrollment.status : "Join"}</button>}

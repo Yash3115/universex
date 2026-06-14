@@ -1,4 +1,4 @@
-import { FaBriefcase, FaCalendarAlt, FaExternalLinkAlt, FaMapMarkerAlt, FaTrash } from "react-icons/fa";
+import { FaBriefcase, FaCalendarAlt, FaCheckCircle, FaExternalLinkAlt, FaMapMarkerAlt, FaRegBookmark, FaTrash } from "react-icons/fa";
 import { FiEdit } from "react-icons/fi";
 
 const formatDate = (date) => {
@@ -13,7 +13,7 @@ const formatDate = (date) => {
 
 const isExpired = (date) => date && new Date(date).getTime() < Date.now();
 
-const JobCard = ({ job, canManage, onEdit, onDelete }) => {
+const JobCard = ({ job, canManage, canTrack, onEdit, onDelete, onToggleInterest, onToggleSave }) => {
   const deadlineExpired = isExpired(job.lastDateToApply);
   const statusLabel = deadlineExpired || job.status === "closed" ? "Closed" : "Open";
 
@@ -86,6 +86,16 @@ const JobCard = ({ job, canManage, onEdit, onDelete }) => {
         </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:flex lg:min-w-44 lg:flex-col">
+          {canTrack && (
+            <>
+              <button className={`btn rounded-2xl ${job.isSaved ? "btn-success" : "btn-outline"}`} type="button" onClick={() => onToggleSave(job._id)}>
+                <FaRegBookmark /> {job.isSaved ? "Saved" : "Save"}
+              </button>
+              <button className={`btn rounded-2xl ${job.isInterested ? "btn-info" : "btn-outline"}`} type="button" onClick={() => onToggleInterest(job._id)}>
+                <FaCheckCircle /> {job.isInterested ? "Interested" : "Interest"}
+              </button>
+            </>
+          )}
           <a
             href={job.registrationLink}
             target="_blank"

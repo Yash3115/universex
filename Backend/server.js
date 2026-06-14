@@ -52,7 +52,7 @@ app.use(
   fileUpload({
     useTempFiles: true,
     tempFileDir: process.env.FILE_UPLOAD_TEMP_DIR || "/tmp/",
-    limits: { fileSize: Number(process.env.MAX_FILE_SIZE_BYTES) || 5 * 1024 * 1024 },
+    limits: { fileSize: Number(process.env.MAX_FILE_SIZE_BYTES) || 15 * 1024 * 1024 },
     abortOnLimit: true,
   })
 );
@@ -124,11 +124,11 @@ app.use(errorMiddleware);
 
 // Root Route
 app.get("/", (req, res) => {
-  res.send("Welcome to the Campus Connection API 🚀");
+  res.send("Welcome to the Campus Connection API");
 });
 
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });

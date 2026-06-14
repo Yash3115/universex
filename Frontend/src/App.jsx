@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { bootstrapSession } from "./features/auth/authSlice";
 import Navbar from "./components/Navbar";
 import DemoBanner from "./components/DemoBanner";
@@ -7,6 +7,7 @@ import { ToastContainer } from "react-toastify";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import UnAuthenticatedRoutes from "./utils/protectedRoutes/UnAuthenticatedRoutes";
 import AuthenticatedRoutes from "./utils/protectedRoutes/AuthenticatedRoutes";  
+import RoleRoute from "./utils/protectedRoutes/RoleRoute";
 
 const BudgetTracker = lazy(() => import("./pages/BudgetPage"));
 const Community = lazy(() => import("./pages/CommunityPage"));
@@ -19,7 +20,6 @@ const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const ContactDirectory = lazy(() => import("./pages/ContactDirectory"));
 const JobsPage = lazy(() => import("./pages/JobsPage"));
-const ClassRoutineInput = lazy(() => import("./dummy/DummyAddRoutine"));
 const AcademicPlannerPage = lazy(() => import("./pages/AcademicPlannerPage"));
 const StudentDirectory = lazy(() => import("./pages/StudentDirectory"));
 const ConnectionsPage = lazy(() => import("./pages/ConnectionsPage"));
@@ -46,7 +46,6 @@ const PageLoader = () => (
 
 const App = () => {
   const dispatch = useDispatch();
-  const user = useSelector((state) => state.auth.user);
 
   useEffect(() => {
     dispatch(bootstrapSession());
@@ -139,7 +138,7 @@ const App = () => {
             path="/routineinput"
             element={
               <AuthenticatedRoutes>
-                <ClassRoutineInput />
+                <AcademicPlannerPage />
               </AuthenticatedRoutes>
             }
           />
@@ -251,7 +250,9 @@ const App = () => {
             path="/admin/accounts"
             element={
               <AuthenticatedRoutes>
-                {user?.role === "Admin" ? <AdminAccountsPage /> : <Dashboard />}
+                <RoleRoute allowedRoles={["Admin"]}>
+                  <AdminAccountsPage />
+                </RoleRoute>
               </AuthenticatedRoutes>
             }
           />

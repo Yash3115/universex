@@ -77,6 +77,33 @@ export const updateAccessRequestStatus = createAsyncThunk(
   }
 );
 
+export const updateManagedAccountActiveStatus = createAsyncThunk(
+  "adminAccounts/updateManagedAccountActiveStatus",
+  async ({ accountId, active }, { rejectWithValue }) => {
+    try {
+      const response = await api.patch(`${ADMIN_ACCOUNTS_ENDPOINT}/${accountId}/active`, { active });
+      return response.data.user;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+export const resetManagedAccountPassword = createAsyncThunk(
+  "adminAccounts/resetManagedAccountPassword",
+  async ({ accountId, password }, { rejectWithValue }) => {
+    try {
+      const response = await api.post(`${ADMIN_ACCOUNTS_ENDPOINT}/${accountId}/reset-password`, { password });
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+const replaceAccount = (accounts, updatedAccount) =>
+  accounts.map((account) => (account._id === updatedAccount._id ? updatedAccount : account));
+
 const adminAccountsSlice = createSlice({
   name: "adminAccounts",
   initialState: {
@@ -91,6 +118,7 @@ const adminAccountsSlice = createSlice({
     createError: null,
     createdAccount: null,
     temporaryPassword: "",
+    actionByAccountId: {},
   },
   reducers: {
     clearCreatedAccount: (state) => {
@@ -157,6 +185,32 @@ const adminAccountsSlice = createSlice({
       .addCase(updateAccessRequestStatus.rejected, (state, action) => {
         delete state.accessRequestActionById[action.meta.arg?.requestId];
         state.accessRequestError = action.payload || action.error.message;
+      })
+      .addCase(updateManagedAccountActiveStatus.pending, (state, action) => {
+        state.actionByAccountId[action.meta.arg.accountId] = true;
+      })
+      .addCase(updateManagedAccountActiveStatus.fulfilled, (state, action) => {
+        delete state.actionByAccountId[action.payload._id];
+        state.accounts = replaceAccount(state.accounts, action.payload);
+      })
+      .addCase(updateManagedAccountActiveStatus.rejected, (state, action) => {
+        delete state.actionByAccountId[action.meta.arg?.accountId];
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(resetManagedAccountPassword.pending, (state, action) => {
+        state.actionByAccountId[action.meta.arg.accountId] = true;
+      })
+      .addCase(resetManagedAccountPassword.fulfilled, (state, action) => {
+        delete state.actionByAccountId[action.payload.user?._id];
+        state.createdAccount = action.payload.user;
+        state.temporaryPassword = action.payload.temporaryPassword || "";
+        if (action.payload.user) {
+          state.accounts = replaceAccount(state.accounts, action.payload.user);
+        }
+      })
+      .addCase(resetManagedAccountPassword.rejected, (state, action) => {
+        delete state.actionByAccountId[action.meta.arg?.accountId];
+        state.error = action.payload || action.error.message;
       });
   },
 });

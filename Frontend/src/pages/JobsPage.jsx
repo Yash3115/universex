@@ -10,6 +10,8 @@ import {
   fetchJobs,
   resetJobFilters,
   setJobFilters,
+  toggleInterestedJob,
+  toggleSavedJob,
   updateJob,
 } from "../features/jobs/jobsSlice";
 
@@ -31,6 +33,7 @@ const JobsPage = () => {
     [jobs]
   );
   const canPostJobs = user?.role === "Admin" || user?.role === "Professor";
+  const canTrackJobs = user?.role === "Student";
 
   const handleFilterChange = (event) => {
     const { name, value } = event.target;
@@ -83,6 +86,22 @@ const JobsPage = () => {
       toast.success("Opportunity deleted successfully");
     } catch (deleteError) {
       toast.error(deleteError || "Unable to delete opportunity");
+    }
+  };
+
+  const handleToggleSave = async (jobId) => {
+    try {
+      await dispatch(toggleSavedJob(jobId)).unwrap();
+    } catch (message) {
+      toast.error(message || "Unable to update saved job");
+    }
+  };
+
+  const handleToggleInterest = async (jobId) => {
+    try {
+      await dispatch(toggleInterestedJob(jobId)).unwrap();
+    } catch (message) {
+      toast.error(message || "Unable to update interest");
     }
   };
 
@@ -179,8 +198,11 @@ const JobsPage = () => {
               key={job._id}
               job={job}
               canManage={canManage(job)}
+              canTrack={canTrackJobs}
               onEdit={handleEdit}
               onDelete={setJobToDelete}
+              onToggleInterest={handleToggleInterest}
+              onToggleSave={handleToggleSave}
             />
           ))}
         </div>

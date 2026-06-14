@@ -15,6 +15,8 @@ const {
   listManagedAccounts,
   listAccessRequests,
   updateAccessRequestStatus,
+  resetManagedAccountPassword,
+  updateManagedAccountActiveStatus,
   completeOnboarding,
 } = require("../controllers/Auth")
 const {
@@ -48,6 +50,8 @@ router.post("/complete-onboarding", authMiddleware, requireNonDemo, completeOnbo
 // Admin-managed account provisioning
 router.get("/admin/accounts", authMiddleware, isAuthorised("Admin"), listManagedAccounts)
 router.post("/admin/accounts", authMiddleware, requireNonDemo, isAuthorised("Admin"), createManagedAccount)
+router.patch("/admin/accounts/:id/active", authMiddleware, requireNonDemo, isAuthorised("Admin"), updateManagedAccountActiveStatus)
+router.post("/admin/accounts/:id/reset-password", authMiddleware, requireNonDemo, isAuthorised("Admin"), resetManagedAccountPassword)
 router.get("/admin/access-requests", authMiddleware, requireNonDemo, isAuthorised("Admin"), listAccessRequests)
 router.patch("/admin/access-requests/:id", authMiddleware, requireNonDemo, isAuthorised("Admin"), updateAccessRequestStatus)
 

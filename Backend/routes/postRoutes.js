@@ -2,6 +2,7 @@ const express = require("express");
 const { 
     createPost, 
     getPosts, 
+    getReportedPosts,
     likePost, 
     deletePost,
     reportPost,
@@ -15,13 +16,14 @@ const {
     deleteComment 
 } = require("../controllers/commentController");
 
-const { authMiddleware, blockDemoFileUploads } = require("../middlewares/authMiddleware");
+const { authMiddleware, blockDemoFileUploads, isAuthorised, requireNonDemo } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
 // 📌 Post Routes
 router.post("/", authMiddleware, blockDemoFileUploads, createPost);
-router.get("/", getPosts);
+router.get("/", authMiddleware, getPosts);
+router.get("/admin/reports", authMiddleware, requireNonDemo, isAuthorised("Admin"), getReportedPosts);
 router.put("/:id/like", authMiddleware, likePost);
 router.put("/:id/save", authMiddleware, savePost);
 router.post("/:id/report", authMiddleware, reportPost);

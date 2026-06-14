@@ -3,12 +3,15 @@ import { FaChalkboardTeacher, FaCopy, FaKey, FaSearch, FaUserPlus, FaUsers } fro
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import api from "../services/api";
 import {
   clearCreatedAccount,
   createManagedAccount,
   fetchAccessRequests,
   fetchManagedAccounts,
+  resetManagedAccountPassword,
   updateAccessRequestStatus,
+  updateManagedAccountActiveStatus,
 } from "../features/admin/adminAccountsSlice";
 
 const emptyForm = {
@@ -68,12 +71,17 @@ const AdminAccountsPage = () => {
     accessRequestStatus,
     accessRequestError,
     accessRequestActionById,
+    actionByAccountId,
   } = useSelector((state) => state.adminAccounts);
 
   const [formData, setFormData] = useState(emptyForm);
-  const [filters, setFilters] = useState({ search: "", role: "", onboarding: "" });
+  const [filters, setFilters] = useState({ search: "", role: "", onboarding: "", active: "" });
   const [query, setQuery] = useState(filters);
+  const [accessRequestTab, setAccessRequestTab] = useState("new");
+  const [reportedPosts, setReportedPosts] = useState([]);
+  const [reportedPostsStatus, setReportedPostsStatus] = useState("idle");
   const isDemoAdmin = Boolean(user?.isDemo);
+  const visibleAccessRequests = accessRequests.filter((request) => request.status === accessRequestTab);
 
   useEffect(() => {
     if (user && user.role !== "Admin") {
@@ -89,9 +97,24 @@ const AdminAccountsPage = () => {
 
   useEffect(() => {
     if (user?.role === "Admin" && !isDemoAdmin) {
-      dispatch(fetchAccessRequests({ status: "new" }));
+      dispatch(fetchAccessRequests({ status: accessRequestTab }));
     }
-  }, [dispatch, isDemoAdmin, user?.role]);
+  }, [accessRequestTab, dispatch, isDemoAdmin, user?.role]);
+
+  useEffect(() => {
+    if (user?.role !== "Admin" || isDemoAdmin) return;
+    const loadReportedPosts = async () => {
+      try {
+        setReportedPostsStatus("loading");
+        const response = await api.get("/api/posts/admin/reports");
+        setReportedPosts(response.data.posts || []);
+        setReportedPostsStatus("succeeded");
+      } catch (_error) {
+        setReportedPostsStatus("failed");
+      }
+    };
+    loadReportedPosts();
+  }, [isDemoAdmin, user?.role]);
 
   const metrics = useMemo(() => {
     const pending = accounts.filter(
@@ -126,7 +149,7 @@ const AdminAccountsPage = () => {
   };
 
   const handleResetFilters = () => {
-    const nextFilters = { search: "", role: "", onboarding: "" };
+    const nextFilters = { search: "", role: "", onboarding: "", active: "" };
     setFilters(nextFilters);
     setQuery(nextFilters);
   };
@@ -141,6 +164,10 @@ const AdminAccountsPage = () => {
 
     if (!formData.firstName.trim() || !formData.lastName.trim() || !formData.email.trim() || !formData.college.trim()) {
       toast.error("First name, last name, email, and college are required.");
+      return;
+    }
+    if (accounts.some((account) => account.email?.toLowerCase() === formData.email.trim().toLowerCase())) {
+      toast.error("An account with this email already exists in the current list.");
       return;
     }
 
@@ -187,6 +214,24 @@ const AdminAccountsPage = () => {
       toast.success(`Request marked ${status}`);
     } catch (message) {
       toast.error(message || "Unable to update access request");
+    }
+  };
+
+  const handleToggleActive = async (account) => {
+    try {
+      await dispatch(updateManagedAccountActiveStatus({ accountId: account._id, active: account.active === false })).unwrap();
+      toast.success(account.active === false ? "Account reactivated" : "Account deactivated");
+    } catch (message) {
+      toast.error(message || "Unable to update account status");
+    }
+  };
+
+  const handleResetPassword = async (account) => {
+    try {
+      await dispatch(resetManagedAccountPassword({ accountId: account._id })).unwrap();
+      toast.success(`Temporary password reset for ${account.firstName}`);
+    } catch (message) {
+      toast.error(message || "Unable to reset temporary password");
     }
   };
 
@@ -255,10 +300,23 @@ const AdminAccountsPage = () => {
               <button
                 type="button"
                 className="btn rounded-xl bg-white"
-                onClick={() => dispatch(fetchAccessRequests({ status: "new" }))}
+                onClick={() => dispatch(fetchAccessRequests({ status: accessRequestTab }))}
               >
                 Refresh requests
               </button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {["new", "reviewed", "closed"].map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  className={`btn btn-sm rounded-xl capitalize ${accessRequestTab === status ? "btn-primary" : "bg-white"}`}
+                  onClick={() => setAccessRequestTab(status)}
+                >
+                  {status}
+                </button>
+              ))}
             </div>
 
             {accessRequestError && (
@@ -287,16 +345,15 @@ const AdminAccountsPage = () => {
                       </td>
                     </tr>
                   )}
-                  {accessRequestStatus !== "loading" && accessRequests.filter((request) => request.status === "new").length === 0 && (
+                  {accessRequestStatus !== "loading" && visibleAccessRequests.length === 0 && (
                     <tr>
                       <td colSpan="6" className="py-8 text-center font-semibold text-slate-500">
-                        No new access requests.
+                        No {accessRequestTab} access requests.
                       </td>
                     </tr>
                   )}
                   {accessRequestStatus !== "loading" &&
-                    accessRequests
-                      .filter((request) => request.status === "new")
+                    visibleAccessRequests
                       .map((request) => (
                         <tr key={request._id}>
                           <td>
@@ -335,6 +392,31 @@ const AdminAccountsPage = () => {
                 </tbody>
               </table>
             </div>
+          </section>
+        )}
+
+        {!isDemoAdmin && (
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-xl font-black text-slate-950">Reported posts</h2>
+                <p className="text-sm text-slate-500">Community posts reported by users for admin review.</p>
+              </div>
+              <span className="badge badge-outline rounded-lg">{reportedPosts.length} reports</span>
+            </div>
+            {reportedPostsStatus === "loading" && <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-500">Loading reports...</p>}
+            {reportedPostsStatus !== "loading" && reportedPosts.length === 0 && <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-500">No reported posts.</p>}
+            {reportedPosts.length > 0 && (
+              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                {reportedPosts.slice(0, 6).map((post) => (
+                  <article key={post._id} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                    <p className="text-sm font-black text-slate-950">{post.user?.firstName} {post.user?.lastName}</p>
+                    <p className="mt-2 line-clamp-3 text-sm text-slate-600">{post.content}</p>
+                    <p className="mt-3 text-xs font-bold text-red-600">{post.reports?.length || 0} report{post.reports?.length === 1 ? "" : "s"}</p>
+                  </article>
+                ))}
+              </div>
+            )}
           </section>
         )}
 
@@ -547,7 +629,7 @@ const AdminAccountsPage = () => {
                   Latest student and professor accounts created for login-only access.
                 </p>
               </div>
-              <form className="grid gap-2 sm:grid-cols-[1fr_9rem_10rem_auto_auto]" onSubmit={handleFilterSubmit}>
+              <form className="grid gap-2 sm:grid-cols-[1fr_9rem_10rem_9rem_auto_auto]" onSubmit={handleFilterSubmit}>
                 <label className="relative block">
                   <span className="sr-only">Search accounts</span>
                   <FaSearch className="pointer-events-none absolute left-3 top-3.5 text-slate-400" aria-hidden="true" />
@@ -581,6 +663,18 @@ const AdminAccountsPage = () => {
                     <option value="required">Setup required</option>
                   </select>
                 </label>
+                <label className="block">
+                  <span className="sr-only">Active status filter</span>
+                  <select
+                    className="select select-bordered w-full rounded-xl"
+                    value={filters.active}
+                    onChange={(event) => updateFilter("active", event.target.value)}
+                  >
+                    <option value="">All status</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                  </select>
+                </label>
                 <button type="submit" className="btn rounded-xl bg-slate-100">
                   Search
                 </button>
@@ -605,19 +699,20 @@ const AdminAccountsPage = () => {
                     <th>Department</th>
                     <th>College</th>
                     <th>Status</th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {status === "loading" && (
                     <tr>
-                      <td colSpan="5" className="py-8 text-center font-semibold text-slate-500">
+                      <td colSpan="6" className="py-8 text-center font-semibold text-slate-500">
                         Loading accounts...
                       </td>
                     </tr>
                   )}
                   {status !== "loading" && accounts.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="py-8 text-center font-semibold text-slate-500">
+                      <td colSpan="6" className="py-8 text-center font-semibold text-slate-500">
                         No managed accounts found.
                       </td>
                     </tr>
@@ -661,6 +756,26 @@ const AdminAccountsPage = () => {
                             >
                               {statusLabel}
                             </span>
+                          </td>
+                          <td>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                className="btn btn-xs rounded-lg"
+                                disabled={isDemoAdmin || Boolean(actionByAccountId[account._id])}
+                                onClick={() => handleResetPassword(account)}
+                              >
+                                Reset password
+                              </button>
+                              <button
+                                type="button"
+                                className={`btn btn-xs rounded-lg ${account.active === false ? "btn-success" : "btn-error"}`}
+                                disabled={isDemoAdmin || Boolean(actionByAccountId[account._id])}
+                                onClick={() => handleToggleActive(account)}
+                              >
+                                {account.active === false ? "Reactivate" : "Deactivate"}
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );

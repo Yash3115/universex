@@ -19,7 +19,7 @@ router.post("/:postId/comments", authMiddleware, createComment);
 router.post("/comments/:commentId/replies", authMiddleware, replyToComment);
 
 // Get all comments for a post (Includes top-level comments + replies)
-router.get("/:postId/comments", getPostComments);
+router.get("/:postId/comments", authMiddleware, getPostComments);
 
 // Delete a comment (Deletes nested replies too)
 router.delete("/comments/:commentId", authMiddleware, deleteComment);

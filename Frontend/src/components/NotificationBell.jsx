@@ -12,13 +12,19 @@ import {
 const getNotificationTarget = (notification) => {
   if (notification.type === "Connection") return "/students";
   if (notification.type === "Interaction") return "/interactions";
-  if (notification.assessment?._id) return "/results";
-  if (notification.question?._id) return notification.course?._id ? `/courses/${notification.course._id}` : "/courses";
-  if (notification.attendanceSession?._id) return notification.course?._id ? `/courses/${notification.course._id}` : "/courses";
-  if (notification.officeHourBooking?._id || notification.officeHourSlot?._id) return "/office-hours";
+  if (notification.material?._id) return notification.course?._id ? `/courses/${notification.course._id}?tab=materials&item=${notification.material._id}` : "/courses";
+  if (notification.announcement?._id) return notification.course?._id ? `/courses/${notification.course._id}?tab=announcements&item=${notification.announcement._id}` : "/courses";
+  if (notification.assignment?._id) return notification.course?._id ? `/courses/${notification.course._id}?tab=assignments&item=${notification.assignment._id}` : "/courses";
+  if (notification.assessment?._id) return notification.course?._id ? `/courses/${notification.course._id}?tab=results&item=${notification.assessment._id}` : "/results";
+  if (notification.question?._id) return notification.course?._id ? `/courses/${notification.course._id}?tab=qa&item=${notification.question._id}` : "/courses";
+  if (notification.attendanceSession?._id) return notification.course?._id ? `/courses/${notification.course._id}?tab=attendance&item=${notification.attendanceSession._id}` : "/courses";
+  if (notification.officeHourBooking?._id || notification.officeHourSlot?._id) {
+    const officeHourItem = notification.officeHourBooking?._id || notification.officeHourSlot?._id;
+    return notification.course?._id ? `/courses/${notification.course._id}?tab=office-hours&item=${officeHourItem}` : "/office-hours";
+  }
   if (notification.type === "Academic") return notification.course?._id ? `/courses/${notification.course._id}` : "/courses";
-  if (notification.job?._id) return "/jobs";
-  if (notification.post?._id) return "/community";
+  if (notification.job?._id) return `/jobs?job=${notification.job._id}`;
+  if (notification.post?._id) return `/community?post=${notification.post._id}`;
   return "/dashboard";
 };
 
@@ -105,22 +111,20 @@ const NotificationBell = () => {
                 {notification.post?.content && <p className="line-clamp-1 text-xs text-gray-500">{notification.post.content}</p>}
                 {isIncomingConnectionRequest && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
-                    <span
-                      role="button"
-                      tabIndex={0}
+                    <button
+                      type="button"
                       className="rounded-xl bg-blue-600 px-3 py-2 text-center text-xs font-bold text-white"
                       onClick={(event) => handleConnectionResponse(event, notification, "accepted")}
                     >
                       {actionLoading ? "Accepting..." : "Accept"}
-                    </span>
-                    <span
-                      role="button"
-                      tabIndex={0}
+                    </button>
+                    <button
+                      type="button"
                       className="rounded-xl bg-gray-100 px-3 py-2 text-center text-xs font-bold text-gray-600"
                       onClick={(event) => handleConnectionResponse(event, notification, "rejected")}
                     >
                       Ignore
-                    </span>
+                    </button>
                   </div>
                 )}
                 <p className="mt-1 text-[11px] text-gray-400">{new Date(notification.createdAt).toLocaleString()}</p>

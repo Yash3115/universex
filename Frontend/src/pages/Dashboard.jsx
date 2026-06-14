@@ -14,20 +14,40 @@ import {
   FaUserShield,
   FaUsers,
 } from "react-icons/fa";
+import { fetchAcademicOverview } from "../features/academic/academicSlice";
+import { fetchChatThreads } from "../features/chat/chatSlice";
 import { fetchCourseMaterials } from "../features/courseMaterials/courseMaterialsSlice";
 import { fetchMyCourses } from "../features/courses/coursesSlice";
+import { fetchMyOfficeHourBookings, fetchProfessorOfficeHourBookings } from "../features/officeHours/officeHoursSlice";
+import { fetchMyResults } from "../features/results/resultsSlice";
 
 function Dashboard() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const user = useSelector((state) => state.auth.user);
   const { myCourses } = useSelector((state) => state.courses);
+  const { tasks } = useSelector((state) => state.academic);
+  const { threads } = useSelector((state) => state.chat);
+  const { myBookings, professorBookings } = useSelector((state) => state.officeHours);
+  const { myResults } = useSelector((state) => state.results);
   const materialsByCourseId = useSelector((state) => state.courseMaterials.itemsByCourseId);
   const username = user?.firstName || "there";
   const role = user?.role || "Student";
 
   useEffect(() => {
-    if (role === "Student") dispatch(fetchMyCourses());
+    if (role === "Student") {
+      dispatch(fetchMyCourses());
+      dispatch(fetchAcademicOverview());
+      dispatch(fetchMyResults());
+      dispatch(fetchMyOfficeHourBookings());
+      dispatch(fetchChatThreads());
+    }
+    if (role === "Professor" || role === "Admin") {
+      dispatch(fetchMyCourses());
+    }
+    if (role === "Professor") {
+      dispatch(fetchProfessorOfficeHourBookings());
+    }
   }, [dispatch, role]);
 
   useEffect(() => {
@@ -50,6 +70,18 @@ function Dashboard() {
         })
         .slice(0, 4),
     [materialsByCourseId, myCourses]
+  );
+  const upcomingTasks = useMemo(
+    () =>
+      [...tasks]
+        .filter((task) => task.status !== "done")
+        .sort((first, second) => new Date(first.dueDate || "2999-12-31") - new Date(second.dueDate || "2999-12-31"))
+        .slice(0, 3),
+    [tasks]
+  );
+  const pendingProfessorBookings = useMemo(
+    () => professorBookings.filter((booking) => booking.status === "requested").slice(0, 3),
+    [professorBookings]
   );
 
   const roleContent = {
@@ -241,6 +273,56 @@ function Dashboard() {
               ))}
               {recentMaterials.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-gray-500 md:col-span-2">No published materials from your courses yet.</p>}
             </div>
+          </section>
+        )}
+
+        {role === "Student" && (
+          <section className="grid gap-4 lg:grid-cols-4">
+            <button type="button" className="rounded-3xl border border-white bg-white p-5 text-left shadow-lg shadow-slate-200/70 hover:bg-blue-50" onClick={() => navigate("/class")}>
+              <p className="text-xs font-black uppercase tracking-wide text-blue-600">Next tasks</p>
+              <p className="mt-3 text-3xl font-black text-gray-900">{upcomingTasks.length}</p>
+              <p className="mt-1 text-sm text-gray-500">{upcomingTasks[0]?.title || "No active deadlines"}</p>
+            </button>
+            <button type="button" className="rounded-3xl border border-white bg-white p-5 text-left shadow-lg shadow-slate-200/70 hover:bg-purple-50" onClick={() => navigate("/results")}>
+              <p className="text-xs font-black uppercase tracking-wide text-purple-600">Latest results</p>
+              <p className="mt-3 text-3xl font-black text-gray-900">{myResults.length}</p>
+              <p className="mt-1 text-sm text-gray-500">{myResults[0]?.assessment?.title || "No published results yet"}</p>
+            </button>
+            <button type="button" className="rounded-3xl border border-white bg-white p-5 text-left shadow-lg shadow-slate-200/70 hover:bg-emerald-50" onClick={() => navigate("/office-hours")}>
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-600">Office hours</p>
+              <p className="mt-3 text-3xl font-black text-gray-900">{myBookings.length}</p>
+              <p className="mt-1 text-sm text-gray-500">{myBookings[0]?.slot?.title || "No bookings yet"}</p>
+            </button>
+            <button type="button" className="rounded-3xl border border-white bg-white p-5 text-left shadow-lg shadow-slate-200/70 hover:bg-cyan-50" onClick={() => navigate("/chat")}>
+              <p className="text-xs font-black uppercase tracking-wide text-cyan-600">Messages</p>
+              <p className="mt-3 text-3xl font-black text-gray-900">{threads.length}</p>
+              <p className="mt-1 text-sm text-gray-500">{threads[0]?.title || "No chats yet"}</p>
+            </button>
+          </section>
+        )}
+
+        {role === "Professor" && (
+          <section className="grid gap-4 lg:grid-cols-4">
+            <button type="button" className="rounded-3xl border border-white bg-white p-5 text-left shadow-lg shadow-slate-200/70 hover:bg-blue-50" onClick={() => navigate("/courses")}>
+              <p className="text-xs font-black uppercase tracking-wide text-blue-600">Active courses</p>
+              <p className="mt-3 text-3xl font-black text-gray-900">{myCourses.length}</p>
+              <p className="mt-1 text-sm text-gray-500">{myCourses[0]?.title || "Create your first course"}</p>
+            </button>
+            <button type="button" className="rounded-3xl border border-white bg-white p-5 text-left shadow-lg shadow-slate-200/70 hover:bg-amber-50" onClick={() => navigate("/office-hours")}>
+              <p className="text-xs font-black uppercase tracking-wide text-amber-600">Booking requests</p>
+              <p className="mt-3 text-3xl font-black text-gray-900">{pendingProfessorBookings.length}</p>
+              <p className="mt-1 text-sm text-gray-500">{pendingProfessorBookings[0]?.student?.firstName || "No pending requests"}</p>
+            </button>
+            <button type="button" className="rounded-3xl border border-white bg-white p-5 text-left shadow-lg shadow-slate-200/70 hover:bg-emerald-50" onClick={() => navigate(myCourses[0]?._id ? `/courses/${myCourses[0]._id}?tab=materials` : "/courses")}>
+              <p className="text-xs font-black uppercase tracking-wide text-emerald-600">Materials</p>
+              <p className="mt-3 text-3xl font-black text-gray-900">Open</p>
+              <p className="mt-1 text-sm text-gray-500">Publish lecture resources</p>
+            </button>
+            <button type="button" className="rounded-3xl border border-white bg-white p-5 text-left shadow-lg shadow-slate-200/70 hover:bg-purple-50" onClick={() => navigate(myCourses[0]?._id ? `/courses/${myCourses[0]._id}?tab=results` : "/courses")}>
+              <p className="text-xs font-black uppercase tracking-wide text-purple-600">Gradebook</p>
+              <p className="mt-3 text-3xl font-black text-gray-900">Review</p>
+              <p className="mt-1 text-sm text-gray-500">Assessments and results</p>
+            </button>
           </section>
         )}
 

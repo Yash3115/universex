@@ -64,6 +64,33 @@ export const deleteJob = createAsyncThunk(
   }
 );
 
+export const toggleSavedJob = createAsyncThunk(
+  "jobs/toggleSavedJob",
+  async (jobId, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`${JOBS_ENDPOINT}/${jobId}/save`);
+      return response.data.job;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+export const toggleInterestedJob = createAsyncThunk(
+  "jobs/toggleInterestedJob",
+  async (jobId, { rejectWithValue }) => {
+    try {
+      const response = await api.put(`${JOBS_ENDPOINT}/${jobId}/interest`);
+      return response.data.job;
+    } catch (error) {
+      return rejectWithValue(error.response?.data?.message || error.message);
+    }
+  }
+);
+
+const replaceJob = (jobs, updatedJob) =>
+  jobs.map((job) => (job._id === updatedJob._id ? updatedJob : job));
+
 const initialState = {
   jobs: [],
   status: "idle",
@@ -116,9 +143,7 @@ const jobsSlice = createSlice({
         state.pagination.totalJobs += 1;
       })
       .addCase(updateJob.fulfilled, (state, action) => {
-        state.jobs = state.jobs.map((job) =>
-          job._id === action.payload.job._id ? action.payload.job : job
-        );
+        state.jobs = replaceJob(state.jobs, action.payload.job);
       })
       .addCase(deleteJob.fulfilled, (state, action) => {
         state.jobs = state.jobs.filter((job) => job._id !== action.payload);
@@ -131,6 +156,18 @@ const jobsSlice = createSlice({
         state.error = action.payload || action.error.message;
       })
       .addCase(deleteJob.rejected, (state, action) => {
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(toggleSavedJob.fulfilled, (state, action) => {
+        state.jobs = replaceJob(state.jobs, action.payload);
+      })
+      .addCase(toggleInterestedJob.fulfilled, (state, action) => {
+        state.jobs = replaceJob(state.jobs, action.payload);
+      })
+      .addCase(toggleSavedJob.rejected, (state, action) => {
+        state.error = action.payload || action.error.message;
+      })
+      .addCase(toggleInterestedJob.rejected, (state, action) => {
         state.error = action.payload || action.error.message;
       });
   },

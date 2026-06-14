@@ -1,23 +1,31 @@
 const crypto = require("crypto");
 const Course = require("../models/courseSchema");
-const User = require("../models/userSchema");
+const {
+  canCreateCourse,
+  canManageCourse,
+  getEnrollment,
+  isCourseInstructor,
+} = require("../utils/coursePolicy");
+const { buildCourseViewerContext, serializeCourse } = require("../utils/courseSerializer");
 
 const COURSE_POPULATE = [
   { path: "professor", select: "firstName lastName email image college role verificationStatus facultyProfile", populate: { path: "facultyProfile" } },
   { path: "enrollments.student", select: "firstName lastName email image college additionalDetails", populate: { path: "additionalDetails" } },
 ];
 
-const isProfessorVerified = (user) => user?.role === "Professor" && user?.verificationStatus !== "rejected";
-
-const isCourseInstructor = (course, userId) =>
-  String(course.professor?._id || course.professor) === String(userId) ||
-  (course.coInstructors || []).some((instructor) => String(instructor?._id || instructor) === String(userId));
-
 const generateJoinCode = () => crypto.randomBytes(3).toString("hex").toUpperCase();
+
+const sendSerializedCourse = (res, status, payload, course, user) =>
+  res.status(status).json({
+    success: true,
+    ...payload,
+    course: serializeCourse(course, user),
+    viewerContext: buildCourseViewerContext(course, user),
+  });
 
 exports.createCourse = async (req, res) => {
   try {
-    if (!isProfessorVerified(req.user) && req.user.role !== "Admin") {
+    if (!canCreateCourse(req.user)) {
       return res.status(403).json({ success: false, message: "Only professors can create courses" });
     }
 
@@ -41,22 +49,27 @@ exports.createCourse = async (req, res) => {
     });
 
     course = await course.populate(COURSE_POPULATE);
-    res.status(201).json({ success: true, message: "Course created", course });
+    return sendSerializedCourse(res, 201, { message: "Course created" }, course, req.user);
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to create course", error: error.message });
+    return res.status(500).json({ success: false, message: "Failed to create course", error: error.message });
   }
 };
 
 exports.getMyCourses = async (req, res) => {
   try {
-    const query = req.user.role === "Professor"
-      ? { professor: req.user.id, status: { $ne: "archived" } }
-      : { enrollments: { $elemMatch: { student: req.user.id, status: { $in: ["requested", "enrolled"] } } }, status: { $ne: "archived" } };
+    const query = req.user.role === "Admin"
+      ? { status: { $ne: "archived" } }
+      : req.user.role === "Professor"
+        ? { professor: req.user.id, status: { $ne: "archived" } }
+        : { enrollments: { $elemMatch: { student: req.user.id, status: { $in: ["requested", "enrolled"] } } }, status: { $ne: "archived" } };
 
     const courses = await Course.find(query).populate(COURSE_POPULATE).sort({ updatedAt: -1 });
-    res.status(200).json({ success: true, courses });
+    return res.status(200).json({
+      success: true,
+      courses: courses.map((course) => serializeCourse(course, req.user)),
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch courses", error: error.message });
+    return res.status(500).json({ success: false, message: "Failed to fetch courses", error: error.message });
   }
 };
 
@@ -72,10 +85,14 @@ exports.discoverCourses = async (req, res) => {
         { description: new RegExp(search.trim(), "i") },
       ];
     }
+
     const courses = await Course.find(query).populate(COURSE_POPULATE).sort({ updatedAt: -1 }).limit(50);
-    res.status(200).json({ success: true, courses });
+    return res.status(200).json({
+      success: true,
+      courses: courses.map((course) => serializeCourse(course, req.user)),
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to discover courses", error: error.message });
+    return res.status(500).json({ success: false, message: "Failed to discover courses", error: error.message });
   }
 };
 
@@ -84,15 +101,15 @@ exports.getCourseById = async (req, res) => {
     const course = await Course.findById(req.params.id).populate(COURSE_POPULATE);
     if (!course) return res.status(404).json({ success: false, message: "Course not found" });
 
-    const isInstructor = isCourseInstructor(course, req.user.id) || req.user.role === "Admin";
-    const enrollment = course.enrollments.find((item) => String(item.student?._id || item.student) === String(req.user.id));
-    if (!isInstructor && !enrollment && course.college !== req.user.college) {
+    const canManage = canManageCourse(course, req.user);
+    const enrollment = getEnrollment(course, req.user.id);
+    if (!canManage && !enrollment && course.college !== req.user.college) {
       return res.status(403).json({ success: false, message: "You do not have access to this course" });
     }
 
-    res.status(200).json({ success: true, course, viewerContext: { isInstructor, enrollmentStatus: enrollment?.status || "none" } });
+    return sendSerializedCourse(res, 200, {}, course, req.user);
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to fetch course", error: error.message });
+    return res.status(500).json({ success: false, message: "Failed to fetch course", error: error.message });
   }
 };
 
@@ -110,9 +127,9 @@ exports.updateCourse = async (req, res) => {
     });
     await course.save();
     course = await course.populate(COURSE_POPULATE);
-    res.status(200).json({ success: true, message: "Course updated", course });
+    return sendSerializedCourse(res, 200, { message: "Course updated" }, course, req.user);
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to update course", error: error.message });
+    return res.status(500).json({ success: false, message: "Failed to update course", error: error.message });
   }
 };
 
@@ -134,7 +151,8 @@ exports.joinCourse = async (req, res) => {
 
     const existing = course.enrollments.find((item) => String(item.student) === String(req.user.id));
     if (existing) {
-      return res.status(200).json({ success: true, message: "Enrollment already exists", course });
+      course = await course.populate(COURSE_POPULATE);
+      return sendSerializedCourse(res, 200, { message: "Enrollment already exists" }, course, req.user);
     }
 
     course.enrollments.push({
@@ -143,9 +161,15 @@ exports.joinCourse = async (req, res) => {
     });
     await course.save();
     course = await course.populate(COURSE_POPULATE);
-    res.status(200).json({ success: true, message: course.enrollmentPolicy === "approval" ? "Enrollment requested" : "Joined course", course });
+    return sendSerializedCourse(
+      res,
+      200,
+      { message: course.enrollmentPolicy === "approval" ? "Enrollment requested" : "Joined course" },
+      course,
+      req.user
+    );
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to join course", error: error.message });
+    return res.status(500).json({ success: false, message: "Failed to join course", error: error.message });
   }
 };
 
@@ -166,8 +190,8 @@ exports.updateEnrollment = async (req, res) => {
     enrollment.status = status;
     await course.save();
     course = await course.populate(COURSE_POPULATE);
-    res.status(200).json({ success: true, message: "Enrollment updated", course });
+    return sendSerializedCourse(res, 200, { message: "Enrollment updated" }, course, req.user);
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to update enrollment", error: error.message });
+    return res.status(500).json({ success: false, message: "Failed to update enrollment", error: error.message });
   }
 };
