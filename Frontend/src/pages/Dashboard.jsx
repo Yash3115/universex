@@ -15,11 +15,14 @@ import {
   FaUsers,
 } from "react-icons/fa";
 import { fetchAcademicOverview } from "../features/academic/academicSlice";
+import { createAcademicTask } from "../features/academic/academicSlice";
 import { fetchChatThreads } from "../features/chat/chatSlice";
 import { fetchCourseMaterials } from "../features/courseMaterials/courseMaterialsSlice";
 import { fetchMyCourses } from "../features/courses/coursesSlice";
 import { fetchMyOfficeHourBookings, fetchProfessorOfficeHourBookings } from "../features/officeHours/officeHoursSlice";
 import { fetchMyResults } from "../features/results/resultsSlice";
+import AiAssistPanel from "../components/AiAssistPanel";
+import { toast } from "react-toastify";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -83,6 +86,34 @@ function Dashboard() {
     () => professorBookings.filter((booking) => booking.status === "requested").slice(0, 3),
     [professorBookings]
   );
+
+  const normalizeAiDueDate = (value) => {
+    if (!value) return undefined;
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return undefined;
+    return date.toISOString();
+  };
+
+  const createTasksFromAi = async (suggestions = []) => {
+    const usableSuggestions = suggestions.slice(0, 4).filter((task) => task?.title);
+    if (usableSuggestions.length === 0) return;
+    try {
+      await Promise.all(
+        usableSuggestions.map((task) =>
+          dispatch(createAcademicTask({
+            title: task.title,
+            description: task.description || "Created from AI academic digest",
+            priority: ["low", "medium", "high"].includes(task.priority) ? task.priority : "medium",
+            dueDate: normalizeAiDueDate(task.dueDate),
+            subject: task.subject || "AI digest",
+          })).unwrap()
+        )
+      );
+      toast.success("Planner tasks created");
+    } catch (error) {
+      toast.error(error || "Unable to create AI planner tasks");
+    }
+  };
 
   const roleContent = {
     Student: {
@@ -274,6 +305,33 @@ function Dashboard() {
               {recentMaterials.length === 0 && <p className="rounded-2xl bg-slate-50 p-4 text-sm text-gray-500 md:col-span-2">No published materials from your courses yet.</p>}
             </div>
           </section>
+        )}
+
+        {role === "Student" && (
+          <AiAssistPanel
+            sourceType="dashboard"
+            sourceId={user?._id}
+            title="AI academic digest"
+            description="Get a compact daily plan from your active courses, tasks, recent materials, results, and office-hour activity."
+            prompt={{ focus: "today and this week", createTaskSuggestions: true }}
+            actions={[{ kind: "dashboard-digest", label: "Generate digest" }]}
+            onCreateTasks={createTasksFromAi}
+          />
+        )}
+
+        {role === "Professor" && myCourses[0]?._id && (
+          <AiAssistPanel
+            sourceType="course"
+            sourceId={myCourses[0]._id}
+            title="Professor AI copilot"
+            description="Draft course content ideas for your first active course. Open the course page for more context."
+            prompt={{ topic: myCourses[0].title }}
+            actions={[
+              { kind: "professor-draft", label: "Lecture outline", prompt: { draftType: "lecture outline" } },
+              { kind: "professor-draft", label: "Announcement", prompt: { draftType: "announcement" } },
+              { kind: "professor-draft", label: "Quiz ideas", prompt: { draftType: "quiz questions" } },
+            ]}
+          />
         )}
 
         {role === "Student" && (

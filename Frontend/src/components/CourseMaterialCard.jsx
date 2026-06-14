@@ -7,6 +7,7 @@ import {
   toggleCourseMaterialBookmark,
   updateCourseMaterial,
 } from "../features/courseMaterials/courseMaterialsSlice";
+import AiAssistPanel from "./AiAssistPanel";
 
 const statusTone = {
   draft: "bg-slate-100 text-slate-700",
@@ -189,6 +190,24 @@ const CourseMaterialCard = ({ courseId, isInstructor, material, onEdit }) => {
             </button>
           </>
         )}
+      </div>
+      <div className="mt-4">
+        <AiAssistPanel
+          compact
+          sourceType="material"
+          sourceId={material._id}
+          title={isInstructor ? "AI material copilot" : "AI study assistant"}
+          description="Generate summaries and study helpers for this material."
+          prompt={{ title: material.title, type: material.type, topic: material.topic }}
+          actions={[
+            { kind: "summarize", label: "Summary" },
+            { kind: "simplify", label: "Simplify" },
+            { kind: "study-notes", label: "Study notes" },
+            { kind: "flashcards", label: "Flashcards" },
+            { kind: "practice-questions", label: "Practice" },
+            { kind: "glossary", label: "Glossary" },
+          ]}
+        />
       </div>
     </article>
   );

@@ -17,6 +17,7 @@ import CourseAnnouncementCard from "../components/CourseAnnouncementCard";
 import CourseAnnouncementFormModal from "../components/CourseAnnouncementFormModal";
 import CourseMaterialCard from "../components/CourseMaterialCard";
 import CourseMaterialEditorModal from "../components/CourseMaterialEditorModal";
+import AiAssistPanel from "../components/AiAssistPanel";
 import { fetchCourseAnnouncements, setAnnouncementFilters } from "../features/courseAnnouncements/courseAnnouncementsSlice";
 import { fetchCourseMaterials, setMaterialFilters } from "../features/courseMaterials/courseMaterialsSlice";
 import { clearSelectedCourse, fetchCourseById, updateEnrollment } from "../features/courses/coursesSlice";
@@ -241,6 +242,24 @@ const CourseDetailPage = () => {
                   </button>
                 </div>
                 {highlightedItemId && <p className="mt-4 rounded-2xl bg-blue-50 p-3 text-sm font-semibold text-blue-700">Open the matching tab to view the linked item.</p>}
+                {viewerContext?.isInstructor && (
+                  <div className="mt-5">
+                    <AiAssistPanel
+                      sourceType="course"
+                      sourceId={id}
+                      title="Professor AI copilot"
+                      description="Draft teaching content from this course context. Review before publishing."
+                      prompt={{ topic: selectedCourse.title, courseCode: selectedCourse.code }}
+                      actions={[
+                        { kind: "professor-draft", label: "Lecture outline", prompt: { draftType: "lecture outline" } },
+                        { kind: "professor-draft", label: "Announcement", prompt: { draftType: "announcement" } },
+                        { kind: "professor-draft", label: "Assignment brief", prompt: { draftType: "assignment brief" } },
+                        { kind: "professor-draft", label: "Rubric", prompt: { draftType: "rubric" } },
+                        { kind: "professor-draft", label: "Quiz ideas", prompt: { draftType: "quiz questions" } },
+                      ]}
+                    />
+                  </div>
+                )}
               </div>
             )}
 

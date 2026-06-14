@@ -1,6 +1,7 @@
 import { useDispatch, useSelector } from "react-redux";
 import { toast } from "react-toastify";
 import { deleteCourseAnnouncement } from "../features/courseAnnouncements/courseAnnouncementsSlice";
+import AiAssistPanel from "./AiAssistPanel";
 
 const priorityClass = {
   normal: "bg-blue-50 text-blue-700",
@@ -38,6 +39,20 @@ const CourseAnnouncementCard = ({ announcement, courseId, isInstructor }) => {
         <span>{new Date(announcement.publishedAt || announcement.createdAt).toLocaleString()}</span>
       </div>
       {announcement.expiresAt && <p className="mt-1 text-xs text-gray-400">Expires {new Date(announcement.expiresAt).toLocaleString()}</p>}
+      <div className="mt-4">
+        <AiAssistPanel
+          compact
+          sourceType="announcement"
+          sourceId={announcement._id}
+          title="AI announcement help"
+          prompt={{ title: announcement.title, priority: announcement.priority }}
+          actions={[
+            { kind: "summarize", label: "Summary" },
+            { kind: "simplify", label: "Simplify" },
+            { kind: "action-items", label: "Actions" },
+          ]}
+        />
+      </div>
       {isInstructor && <button className="btn mt-4 rounded-2xl bg-red-50 text-red-600 hover:bg-red-100" disabled={isDeleting} onClick={remove}>{isDeleting ? "Deleting..." : "Delete"}</button>}
     </article>
   );

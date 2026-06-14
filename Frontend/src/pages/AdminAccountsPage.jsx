@@ -13,6 +13,7 @@ import {
   updateAccessRequestStatus,
   updateManagedAccountActiveStatus,
 } from "../features/admin/adminAccountsSlice";
+import AiAssistPanel from "../components/AiAssistPanel";
 
 const emptyForm = {
   role: "Student",
@@ -386,6 +387,16 @@ const AdminAccountsPage = () => {
                                 Close
                               </button>
                             </div>
+                            <div className="mt-3 min-w-72">
+                              <AiAssistPanel
+                                compact
+                                sourceType="accessRequest"
+                                sourceId={request._id}
+                                title="AI request summary"
+                                prompt={{ status: request.status, role: request.role }}
+                                actions={[{ kind: "access-request-summary", label: "Summarize" }]}
+                              />
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -413,6 +424,16 @@ const AdminAccountsPage = () => {
                     <p className="text-sm font-black text-slate-950">{post.user?.firstName} {post.user?.lastName}</p>
                     <p className="mt-2 line-clamp-3 text-sm text-slate-600">{post.content}</p>
                     <p className="mt-3 text-xs font-bold text-red-600">{post.reports?.length || 0} report{post.reports?.length === 1 ? "" : "s"}</p>
+                    <div className="mt-3">
+                      <AiAssistPanel
+                        compact
+                        sourceType="reportedPost"
+                        sourceId={post._id}
+                        title="AI moderation triage"
+                        prompt={{ reportCount: post.reports?.length || 0 }}
+                        actions={[{ kind: "moderation-triage", label: "Triage" }]}
+                      />
+                    </div>
                   </article>
                 ))}
               </div>

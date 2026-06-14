@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchMyResults } from "../features/results/resultsSlice";
+import AiAssistPanel from "../components/AiAssistPanel";
 
 const ResultsPage = () => {
   const dispatch = useDispatch();
@@ -28,6 +29,21 @@ const ResultsPage = () => {
               <p className="mt-2 text-sm text-gray-500">{result.assessment?.type}</p>
               <p className="mt-4 text-lg font-black text-gray-900">{result.marks}/{result.assessment?.maxMarks || "--"} {result.grade && `- ${result.grade}`}</p>
               {result.feedback && <p className="mt-3 rounded-2xl bg-blue-50 p-3 text-sm text-blue-700">{result.feedback}</p>}
+              {result.feedback && (
+                <div className="mt-4">
+                  <AiAssistPanel
+                    compact
+                    sourceType="result"
+                    sourceId={result._id}
+                    title="AI feedback helper"
+                    prompt={{ assessment: result.assessment?.title, marks: result.marks, maxMarks: result.assessment?.maxMarks }}
+                    actions={[
+                      { kind: "summarize", label: "Explain" },
+                      { kind: "action-items", label: "Next steps" },
+                    ]}
+                  />
+                </div>
+              )}
               <p className="mt-3 text-xs text-gray-400">Published {new Date(result.publishedAt).toLocaleString()}</p>
             </article>
           ))}

@@ -1,5 +1,6 @@
 import { FaBriefcase, FaCalendarAlt, FaCheckCircle, FaExternalLinkAlt, FaMapMarkerAlt, FaRegBookmark, FaTrash } from "react-icons/fa";
 import { FiEdit } from "react-icons/fi";
+import AiAssistPanel from "./AiAssistPanel";
 
 const formatDate = (date) => {
   if (!date) return "No deadline";
@@ -83,6 +84,19 @@ const JobCard = ({ job, canManage, canTrack, onEdit, onDelete, onToggleInterest,
               ))}
             </div>
           )}
+
+          <AiAssistPanel
+            compact
+            sourceType="job"
+            sourceId={job._id}
+            title="AI opportunity helper"
+            prompt={{ title: job.title, companyName: job.companyName }}
+            actions={[
+              { kind: "summarize", label: "Summary" },
+              { kind: "simplify", label: "Simplify" },
+              { kind: "action-items", label: "Apply steps" },
+            ]}
+          />
         </div>
 
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:flex lg:min-w-44 lg:flex-col">

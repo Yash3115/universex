@@ -7,6 +7,7 @@ import { deletePost } from "../features/posts/postsSlice";
 import { toast } from "react-toastify";
 import ConfirmDialog from "./ConfirmDialog";
 import { getImageUrl } from "../utils/imageUtils";
+import AiAssistPanel from "./AiAssistPanel";
 
 const PostCard = ({ post, allowUpdate = false }) => {
   const user = useSelector((state) => state.auth.user);
@@ -168,6 +169,21 @@ const PostCard = ({ post, allowUpdate = false }) => {
         >
           <FaFlag /> <span>Report</span>
         </button>
+      </div>
+
+      <div className="mt-4">
+        <AiAssistPanel
+          compact
+          sourceType="post"
+          sourceId={post?._id}
+          title="AI post helper"
+          prompt={{ category: post?.category }}
+          actions={[
+            { kind: "summarize", label: "Summary" },
+            { kind: "simplify", label: "Simplify" },
+            { kind: "action-items", label: "Actions" },
+          ]}
+        />
       </div>
 
       {/* Report Modal */}
